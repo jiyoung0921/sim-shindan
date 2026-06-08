@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/.venv
 /.pnp
 .pnp.*
 .yarn/*
@@ -12,6 +13,10 @@
 
 # testing
 /coverage
+
+# python
+__pycache__/
+*.py[cod]
 
 # next.js
 /.next/
@@ -32,9 +37,15 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.local.example
+.dev.vars
 
 # vercel
 .vercel
+
+# cloudflare/opennext
+.open-next
+.wrangler
 
 # typescript
 *.tsbuildinfo

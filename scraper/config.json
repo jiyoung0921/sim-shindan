@@ -1,0 +1,128 @@
+{
+  "carriers": [
+    {
+      "id": "docomo",
+      "plans": [
+        {
+          "plan_id": "docomo_eximo",
+          "url": "https://www.docomo.ne.jp/charge/eximo/",
+          "selectors": {
+            "plan_name": "h1.plan-name, .plan-title h1",
+            "base_fee": ".price-main, .charge-price strong",
+            "data_table": "table.charge-table, .plan-table"
+          }
+        },
+        {
+          "plan_id": "docomo_eximo_mini",
+          "url": "https://www.docomo.ne.jp/charge/eximo/",
+          "selectors": {
+            "base_fee": ".price-step-table td.price"
+          }
+        },
+        {
+          "plan_id": "ahamo",
+          "url": "https://ahamo.com/services/top/",
+          "selectors": {
+            "plan_name": "h1",
+            "base_fee": ".price-num, .charge-amount"
+          }
+        }
+      ]
+    },
+    {
+      "id": "au",
+      "plans": [
+        {
+          "plan_id": "povo2",
+          "url": "https://povo.jp/spec/",
+          "selectors": {
+            "base_fee": ".price-number, .plan-price"
+          }
+        }
+      ]
+    },
+    {
+      "id": "softbank",
+      "plans": [
+        {
+          "plan_id": "linemo_smart",
+          "url": "https://www.linemo.jp/plan/",
+          "selectors": {
+            "base_fee": ".plan-price-number, .price-amount"
+          }
+        },
+        {
+          "plan_id": "ymobile_simple2m",
+          "url": "https://www.ymobile.jp/plan/",
+          "selectors": {
+            "base_fee": ".plan-price, .price-num"
+          }
+        }
+      ]
+    },
+    {
+      "id": "uqmobile",
+      "plans": [
+        {
+          "plan_id": "uq_comekomi_m",
+          "url": "https://www.uqwimax.jp/mobile/plans/komikomi/",
+          "selectors": {
+            "base_fee": ".price-num, .plan-price"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rakuten",
+      "plans": [
+        {
+          "plan_id": "rakuten_saikyo",
+          "url": "https://network.mobile.rakuten.co.jp/fee/un-limit/",
+          "selectors": {
+            "base_fee": ".price-main strong, .charge-price"
+          }
+        }
+      ]
+    },
+    {
+      "id": "iij",
+      "plans": [
+        {
+          "plan_id": "iijmio_giga10",
+          "url": "https://www.iijmio.jp/hnapocket/",
+          "selectors": {
+            "base_fee": ".price-area td, .data-plan-price"
+          }
+        }
+      ]
+    },
+    {
+      "id": "mineo",
+      "plans": [
+        {
+          "plan_id": "mineo_maypita10",
+          "url": "https://mineo.jp/plan/",
+          "selectors": {
+            "base_fee": ".plan-price .price, .charge-price"
+          }
+        }
+      ]
+    },
+    {
+      "id": "nuro",
+      "plans": [
+        {
+          "plan_id": "nuro_neo10",
+          "url": "https://mobile.nuro.jp/plan/",
+          "selectors": {
+            "base_fee": ".plan-price, .price-main"
+          }
+        }
+      ]
+    }
+  ],
+  "anomaly_threshold_pct": 30,
+  "request_delay_sec": 2.0,
+  "max_retries": 3,
+  "user_agent": "Mozilla/5.0 (compatible; SimShindanBot/1.0; +https://sim-shindan.example.com/bot)"
+}

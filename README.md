@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# スマホ料金診断
 
-## Getting Started
+「今のキャリアから変えるべきか？」に答えるWebサービス。  
+最安プランを並べるだけでなく、家族割・端末残債・ポイント経済圏・乗り換え摩擦を加味して **「今すぐ変える / 次のタイミングで変える / 今は変えない」** の3択で判定を返す。
 
-First, run the development server:
+---
+
+## ステータス
+
+**実装完了・未デプロイ**（2026-06-08時点）
+
+---
+
+## 技術スタック
+
+| レイヤー | 技術 |
+|---------|------|
+| フロントエンド | Next.js 16（App Router）/ TypeScript / Tailwind CSS |
+| DB | Supabase（PostgreSQL + RLS） |
+| ホスティング（予定） | Cloudflare Workers + OpenNext |
+| CI/CD | GitHub Actions（毎日JST 07:00スクレイパー実行） |
+| スクレイパー | Python 3.12 / httpx / Pydantic v2 / BeautifulSoup |
+
+---
+
+## クイックスタート
 
 ```bash
+cp .env.local.example .env.local   # 環境変数を設定（Supabase未設定でも動く）
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# → http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ドキュメント
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| ファイル | 内容 |
+|---------|------|
+| [`CONTEXT.md`](./CONTEXT.md) | **AI向け引き継ぎ資料**（アーキテクチャ・実装状況・コアロジック） |
+| [`docs/requirements.md`](./docs/requirements.md) | 要件定義書（詳細仕様・全959行） |
+| [`docs/launch.md`](./docs/launch.md) | ローンチ手順書（30〜35分でデプロイ完了） |
+| [`.env.local.example`](./.env.local.example) | 環境変数テンプレート |
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## ディレクトリ構成
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+sim-shindan/
+├── src/
+│   ├── app/                   # Next.js ルート
+│   │   ├── page.tsx           # LP（トップ）
+│   │   ├── diagnosis/         # 診断フォーム
+│   │   ├── result/            # 診断結果
+│   │   ├── history/           # 更新履歴（公開）
+│   │   ├── admin/             # 管理画面
+│   │   └── api/               # APIルート
+│   ├── components/            # UIコンポーネント
+│   └── lib/
+│       ├── scoring.ts         # スコアリングエンジン（コアロジック）
+│       ├── types.ts           # 型定義
+│       ├── db.ts              # DB操作（Supabase / 静的JSONフォールバック）
+│       └── supabase.ts        # Supabaseクライアント
+├── scraper/                   # Pythonスクレイパー
+│   ├── main.py                # エントリーポイント
+│   ├── fetcher.py             # Conditional GET
+│   ├── extractor.py           # HTML解析
+│   ├── normalizer.py          # データ正規化
+│   ├── validator.py           # Pydantic検証 + 異常検知
+│   ├── diff.py                # 差分生成・DB書き込み
+│   ├── notifier.py            # Slack通知
+│   └── new_service_detector.py # 新サービス検知
+├── public/data/plans.json     # 静的プランデータ（Supabase未設定時のフォールバック）
+├── supabase/migrations/       # DBマイグレーションSQL
+├── .github/workflows/         # GitHub Actions（スクレイパー定時実行）
+└── docs/                      # ドキュメント
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## コスト
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| 項目 | 初期 | 月額 |
+|------|------|------|
+| ドメイン（Cloudflare Registrar） | ¥1,618 | — |
+| その他すべて | ¥0 | ¥0 |
+| 2年目以降 | — | ¥135/月 |
