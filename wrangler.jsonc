@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "sim-shindan",
+  "account_id": "b3aef9a07f47d856b54d8b78d40d3129",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-06-08",
   "compatibility_flags": [
@@ -9,5 +10,11 @@
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
-  }
+  },
+  "routes": [
+    {
+      "pattern": "sumahoshindan.com",
+      "custom_domain": true
+    }
+  ]
 }
