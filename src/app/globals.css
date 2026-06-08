@@ -1,31 +1,54 @@
 @import "tailwindcss";
 
+html {
+  background: #fafaf9;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN",
     "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif;
+  text-rendering: optimizeLegibility;
 }
 
 /* レンジスライダーのスタイル */
+input[type="range"] {
+  height: 32px;
+  background: transparent;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #e7e5e4;
+}
+
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: #18181b;
   cursor: pointer;
   border: 3px solid white;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 5px rgba(24, 24, 27, 0.25);
+  margin-top: -8px;
+}
+
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #e7e5e4;
 }
 
 input[type="range"]::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: #18181b;
   cursor: pointer;
   border: 3px solid white;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 5px rgba(24, 24, 27, 0.25);
 }
 
 /* details/summary のマーカーを非表示 */

@@ -43,7 +43,7 @@ export default function RootLayout({
           </>
         )}
       </head>
-      <body className="bg-slate-50 text-slate-900 antialiased min-h-screen">
+      <body className="min-h-screen bg-stone-50 text-zinc-950 antialiased">
         {children}
       </body>
     </html>

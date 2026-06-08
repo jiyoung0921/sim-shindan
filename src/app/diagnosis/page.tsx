@@ -1,33 +1,34 @@
 import type { Metadata } from "next";
-import DiagnosisFlow from "@/components/DiagnosisFlow";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import DiagnosisFlow from "@/components/DiagnosisFlow";
 
 export const metadata: Metadata = {
-  title: "スマホ料金診断スタート",
+  title: "診断スタート",
   description:
-    "今のキャリア・月額・データ使用量などを選ぶだけ。家族割・端末残債・ポイント経済圏まで考慮して「今変えるべきか」を5分で判定します。登録不要・完全無料。",
+    "今のキャリア・月額・データ使用量などを選ぶだけ。家族割・端末残債・ポイント経済圏まで考慮して「今変えるべきか」を5分で判定します。",
   robots: { index: true, follow: true },
 };
 
 export default function DiagnosisPage() {
   return (
-    <main className="min-h-screen bg-slate-50">
-      {/* ナビ */}
-      <nav className="max-w-lg mx-auto px-5 py-4 flex items-center justify-between">
-        <Link href="/" className="text-blue-600 text-sm hover:underline flex items-center gap-1">
-          ← トップへ
+    <main className="min-h-screen bg-stone-50 text-zinc-950">
+      <nav className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-950"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          トップ
         </Link>
-        <span className="font-bold text-slate-700 text-sm">スマホ料金診断</span>
-        <div className="w-16" /> {/* 右側スペーサー */}
+        <span className="text-sm font-semibold text-zinc-950">スマホ料金診断</span>
+        <span className="w-14" aria-hidden="true" />
       </nav>
 
-      {/* 診断カード */}
-      <div className="max-w-lg mx-auto px-5 py-6">
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 sm:p-8">
-          <DiagnosisFlow />
-        </div>
-        <p className="text-center text-xs text-slate-400 mt-4">
-          個人情報の入力は不要です・匿名で診断できます
+      <div className="mx-auto max-w-5xl px-4 pb-10 sm:px-6">
+        <DiagnosisFlow />
+        <p className="mt-5 text-center text-xs leading-6 text-zinc-500">
+          名前、電話番号、請求書アップロードは不要です。
         </p>
       </div>
     </main>

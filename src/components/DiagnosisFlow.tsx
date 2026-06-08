@@ -1,8 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CircleHelp,
+  Gauge,
+  ReceiptText,
+  RotateCcw,
+} from "lucide-react";
 import { DiagnosisAnswers, PointEcosystemType } from "@/lib/types";
+
+type StepId =
+  | "carrier"
+  | "fee"
+  | "data"
+  | "call"
+  | "family"
+  | "familySwitch"
+  | "installment"
+  | "support"
+  | "quality"
+  | "points"
+  | "migration";
 
 const INITIAL_ANSWERS: DiagnosisAnswers = {
   current_carrier: "",
@@ -18,99 +40,216 @@ const INITIAL_ANSWERS: DiagnosisAnswers = {
   migration_tolerance: "support_needed",
 };
 
+const BASE_STEPS: StepId[] = [
+  "carrier",
+  "fee",
+  "data",
+  "call",
+  "family",
+  "installment",
+  "support",
+  "quality",
+  "points",
+  "migration",
+];
+
+const STEP_META: Record<StepId, { label: string; title: string; hint: string }> = {
+  carrier: {
+    label: "キャリア",
+    title: "今使っている回線は？",
+    hint: "メインで使っているスマホ回線を選んでください。",
+  },
+  fee: {
+    label: "月額",
+    title: "毎月の通信費はいくら？",
+    hint: "端末代を除いた金額で十分です。わからなければ近い金額にしてください。",
+  },
+  data: {
+    label: "データ",
+    title: "月に使うデータ量は？",
+    hint: "迷ったら「わからない」で進めて構いません。",
+  },
+  call: {
+    label: "通話",
+    title: "電話をかける頻度は？",
+    hint: "LINEやZoomではなく、通常の電話で考えてください。",
+  },
+  family: {
+    label: "家族割",
+    title: "家族と同じキャリア？",
+    hint: "家族割が崩れるかどうかを判定に入れます。",
+  },
+  familySwitch: {
+    label: "家族割",
+    title: "家族も一緒に変える？",
+    hint: "自分だけ動く場合は、家族側の請求が変わる可能性があります。",
+  },
+  installment: {
+    label: "残債",
+    title: "端末の支払いは残っている？",
+    hint: "乗り換えても端末残債の支払いは続きます。",
+  },
+  support: {
+    label: "店舗",
+    title: "店頭サポートは必要？",
+    hint: "故障、機種変更、手続き変更を店で相談したいかで選んでください。",
+  },
+  quality: {
+    label: "品質",
+    title: "通信品質への不安は？",
+    hint: "大手キャリア水準を重視するほど、MVNOの評価を慎重にします。",
+  },
+  points: {
+    label: "ポイント",
+    title: "よく使うポイントは？",
+    hint: "ポイントは現金節約とは分けて、補助的に判定します。",
+  },
+  migration: {
+    label: "手続き",
+    title: "乗り換え手続きはできそう？",
+    hint: "無理にオンライン専用プランへ寄せないための質問です。",
+  },
+};
+
 const CARRIERS = [
-  { id: "docomo", label: "ドコモ", color: "bg-red-50 border-red-200 text-red-700" },
-  { id: "au", label: "au", color: "bg-orange-50 border-orange-200 text-orange-700" },
-  { id: "softbank", label: "ソフトバンク", color: "bg-yellow-50 border-yellow-200 text-yellow-700" },
-  { id: "rakuten", label: "楽天モバイル", color: "bg-pink-50 border-pink-200 text-pink-700" },
-  { id: "ymobile", label: "Y!mobile", color: "bg-purple-50 border-purple-200 text-purple-700" },
-  { id: "uqmobile", label: "UQ mobile", color: "bg-green-50 border-green-200 text-green-700" },
-  { id: "ahamo", label: "ahamo", color: "bg-blue-50 border-blue-200 text-blue-700" },
-  { id: "povo", label: "povo", color: "bg-teal-50 border-teal-200 text-teal-700" },
-  { id: "other", label: "その他/格安SIM", color: "bg-slate-50 border-slate-200 text-slate-700" },
+  { id: "docomo", label: "ドコモ", sub: "docomo" },
+  { id: "au", label: "au", sub: "KDDI" },
+  { id: "softbank", label: "ソフトバンク", sub: "SoftBank" },
+  { id: "rakuten", label: "楽天モバイル", sub: "Rakuten" },
+  { id: "ymobile", label: "Y!mobile", sub: "サブブランド" },
+  { id: "uqmobile", label: "UQ mobile", sub: "サブブランド" },
+  { id: "ahamo", label: "ahamo", sub: "オンライン専用" },
+  { id: "povo", label: "povo", sub: "オンライン専用" },
+  { id: "other", label: "その他/格安SIM", sub: "MVNOなど" },
 ];
 
-const POINT_OPTIONS: { id: PointEcosystemType; label: string; icon: string }[] = [
-  { id: "d_point", label: "dポイント", icon: "🔴" },
-  { id: "au_point", label: "Pontaポイント", icon: "🟠" },
-  { id: "paypay", label: "PayPayポイント", icon: "🟡" },
-  { id: "rakuten", label: "楽天ポイント", icon: "🔴" },
-  { id: "none", label: "特になし", icon: "✖️" },
+const POINT_OPTIONS: { id: PointEcosystemType; label: string }[] = [
+  { id: "d_point", label: "dポイント" },
+  { id: "au_point", label: "Ponta" },
+  { id: "paypay", label: "PayPay" },
+  { id: "rakuten", label: "楽天ポイント" },
+  { id: "none", label: "特になし" },
 ];
 
-function ProgressBar({ step, total }: { step: number; total: number }) {
-  const pct = Math.round((step / total) * 100);
-  return (
-    <div className="mb-8">
-      <div className="flex justify-between text-xs text-slate-400 mb-2">
-        <span>Q{step}/{total}</span>
-        <span>{pct}%完了</span>
-      </div>
-      <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-blue-500 rounded-full transition-all duration-500"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  );
+const SUPPORT_LABELS = ["", "不要", "あれば安心", "重要", "必須"];
+const QUALITY_LABELS = ["", "気にしない", "少し気になる", "かなり気になる", "大手水準が必要"];
+
+function currency(value: number) {
+  return `¥${value.toLocaleString()}`;
 }
 
-function SelectButton({
+function ChoiceButton({
   selected,
   onClick,
-  children,
-  className = "",
+  title,
+  description,
 }: {
   selected: boolean;
   onClick: () => void;
-  children: React.ReactNode;
-  className?: string;
+  title: string;
+  description?: string;
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`w-full text-left px-4 py-3.5 rounded-xl border-2 font-medium transition-all text-sm ${
+      className={`group flex min-h-16 w-full items-start gap-3 rounded-lg border px-4 py-3 text-left transition-colors ${
         selected
-          ? "border-blue-500 bg-blue-50 text-blue-700"
-          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-      } ${className}`}
+          ? "border-zinc-950 bg-white text-zinc-950 shadow-sm"
+          : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
+      }`}
     >
-      {children}
+      <span
+        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+          selected ? "border-zinc-950 bg-zinc-950 text-white" : "border-zinc-300 text-transparent"
+        }`}
+      >
+        <Check className="h-3.5 w-3.5" aria-hidden="true" />
+      </span>
+      <span>
+        <span className="block text-sm font-semibold">{title}</span>
+        {description && <span className="mt-1 block text-xs leading-5 text-zinc-500">{description}</span>}
+      </span>
     </button>
   );
 }
 
-function SliderInput({
+function RangeControl({
   value,
   min,
   max,
   step,
-  labels,
+  label,
+  minLabel,
+  maxLabel,
   onChange,
 }: {
   value: number;
   min: number;
   max: number;
   step: number;
-  labels: string[];
-  onChange: (v: number) => void;
+  label: string;
+  minLabel: string;
+  maxLabel: string;
+  onChange: (value: number) => void;
 }) {
   return (
     <div>
+      <div className="mb-5 rounded-lg border border-zinc-200 bg-white px-4 py-5 text-center">
+        <p className="text-sm text-zinc-500">{label}</p>
+        <p className="mt-1 text-3xl font-semibold text-zinc-950">{currency(value)}</p>
+      </div>
       <input
         type="range"
         min={min}
         max={max}
         step={step}
         value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer accent-blue-500"
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="w-full cursor-pointer accent-zinc-950"
       />
-      <div className="flex justify-between text-xs text-slate-400 mt-2">
-        {labels.map((l, i) => (
-          <span key={i}>{l}</span>
+      <div className="mt-2 flex justify-between text-xs text-zinc-500">
+        <span>{minLabel}</span>
+        <span>{maxLabel}</span>
+      </div>
+    </div>
+  );
+}
+
+function FourPointScale({
+  value,
+  labels,
+  onChange,
+}: {
+  value: 1 | 2 | 3 | 4;
+  labels: string[];
+  onChange: (value: 1 | 2 | 3 | 4) => void;
+}) {
+  return (
+    <div>
+      <div className="mb-5 rounded-lg border border-zinc-200 bg-white px-4 py-5 text-center">
+        <p className="text-sm text-zinc-500">選択中</p>
+        <p className="mt-1 text-2xl font-semibold text-zinc-950">{labels[value]}</p>
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {[1, 2, 3, 4].map((point) => (
+          <button
+            key={point}
+            type="button"
+            onClick={() => onChange(point as 1 | 2 | 3 | 4)}
+            className={`h-12 rounded-lg border text-sm font-semibold transition-colors ${
+              value === point
+                ? "border-zinc-950 bg-zinc-950 text-white"
+                : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
+            }`}
+          >
+            {point}
+          </button>
         ))}
+      </div>
+      <div className="mt-2 flex justify-between text-xs text-zinc-500">
+        <span>{labels[1]}</span>
+        <span>{labels[4]}</span>
       </div>
     </div>
   );
@@ -118,367 +257,385 @@ function SliderInput({
 
 export default function DiagnosisFlow() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
+  const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<DiagnosisAnswers>(INITIAL_ANSWERS);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
-  const totalSteps = answers.family_lines_count > 0 ? 10 : 9;
+  const steps = useMemo<StepId[]>(() => {
+    if (answers.family_lines_count > 0) {
+      return [
+        "carrier",
+        "fee",
+        "data",
+        "call",
+        "family",
+        "familySwitch",
+        "installment",
+        "support",
+        "quality",
+        "points",
+        "migration",
+      ];
+    }
+    return BASE_STEPS;
+  }, [answers.family_lines_count]);
 
-  const goNext = () => {
-    setIsAnimating(true);
-    setTimeout(() => {
-      setStep((s) => s + 1);
-      setIsAnimating(false);
-    }, 180);
-  };
+  const activeStepIndex = Math.min(stepIndex, steps.length - 1);
+  const currentStep = steps[activeStepIndex];
+  const meta = STEP_META[currentStep];
+  const progress = Math.round(((activeStepIndex + 1) / steps.length) * 100);
 
-  const goPrev = () => {
-    setStep((s) => Math.max(1, s - 1));
-  };
+  useEffect(() => {
+    let cancelled = false;
+
+    queueMicrotask(() => {
+      if (cancelled) return;
+
+      const raw = window.localStorage.getItem("sim_shindan_answers_draft");
+      if (raw) {
+        try {
+          setAnswers({ ...INITIAL_ANSWERS, ...JSON.parse(raw) });
+        } catch {
+          window.localStorage.removeItem("sim_shindan_answers_draft");
+        }
+      }
+      setHydrated(true);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    window.localStorage.setItem("sim_shindan_answers_draft", JSON.stringify(answers));
+  }, [answers, hydrated]);
 
   const update = <K extends keyof DiagnosisAnswers>(key: K, value: DiagnosisAnswers[K]) => {
     setAnswers((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleFinish = () => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("sim_shindan_answers", JSON.stringify(answers));
+  const goNext = () => {
+    if (activeStepIndex >= steps.length - 1) {
+      handleFinish();
+      return;
     }
+    setStepIndex((value) => Math.min(value + 1, steps.length - 1));
+  };
+
+  const goPrev = () => setStepIndex(Math.max(0, activeStepIndex - 1));
+
+  const reset = () => {
+    setAnswers(INITIAL_ANSWERS);
+    setStepIndex(0);
+    window.localStorage.removeItem("sim_shindan_answers_draft");
+    window.localStorage.removeItem("sim_shindan_answers");
+  };
+
+  const handleFinish = () => {
+    window.localStorage.setItem("sim_shindan_answers", JSON.stringify(answers));
+    window.localStorage.removeItem("sim_shindan_answers_draft");
     router.push("/result");
   };
 
-  const canProceed = (): boolean => {
-    switch (step) {
-      case 1: return answers.current_carrier !== "";
-      case 2: return answers.current_monthly_fee_yen >= 0;
-      default: return true;
-    }
-  };
+  const canProceed = currentStep !== "carrier" || answers.current_carrier !== "";
 
   const renderStep = () => {
-    // ステップ番号を family_lines_count の有無でずらす
-    const effectiveStep = step;
-
-    switch (effectiveStep) {
-      // Q1: 現在のキャリア
-      case 1:
+    switch (currentStep) {
+      case "carrier":
         return (
-          <div>
-            <h2 className="text-xl font-bold text-slate-800 mb-2">今使っているキャリアは？</h2>
-            <p className="text-sm text-slate-500 mb-6">メインで使っているものを選んでください。</p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {CARRIERS.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => update("current_carrier", c.id)}
-                  className={`px-3 py-3 rounded-xl border-2 text-sm font-semibold transition-all ${
-                    answers.current_carrier === c.id
-                      ? `${c.color} border-current`
-                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {c.label}
-                </button>
-              ))}
-            </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {CARRIERS.map((carrier) => (
+              <ChoiceButton
+                key={carrier.id}
+                selected={answers.current_carrier === carrier.id}
+                onClick={() => update("current_carrier", carrier.id)}
+                title={carrier.label}
+                description={carrier.sub}
+              />
+            ))}
           </div>
         );
 
-      // Q2: 月額料金
-      case 2:
+      case "fee":
         return (
-          <div>
-            <h2 className="text-xl font-bold text-slate-800 mb-2">毎月の請求額は大体いくら？</h2>
-            <p className="text-sm text-slate-500 mb-8">端末の分割代を含まない、通信費のみの金額で構いません。</p>
-            <div className="text-center mb-8">
-              <span className="text-5xl font-extrabold text-slate-900">
-                ¥{answers.current_monthly_fee_yen.toLocaleString()}
-              </span>
-              <span className="text-slate-400 text-lg ml-1">/月</span>
-            </div>
-            <SliderInput
-              value={answers.current_monthly_fee_yen}
-              min={1000}
-              max={20000}
-              step={500}
-              labels={["¥1,000", "¥5,000", "¥10,000", "¥15,000", "¥20,000"]}
-              onChange={(v) => update("current_monthly_fee_yen", v)}
+          <RangeControl
+            value={answers.current_monthly_fee_yen}
+            min={1000}
+            max={20000}
+            step={500}
+            label="現在の通信費"
+            minLabel="¥1,000"
+            maxLabel="¥20,000"
+            onChange={(value) => update("current_monthly_fee_yen", value)}
+          />
+        );
+
+      case "data":
+        return (
+          <div className="grid gap-3">
+            {[
+              { value: 3, title: "3GB未満", description: "Wi-Fi中心。LINE、検索、短い動画くらい" },
+              { value: 7, title: "3〜10GB", description: "外でもよく使う。動画はたまに見る" },
+              { value: 20, title: "10〜30GB", description: "動画、SNS、テザリングをよく使う" },
+              { value: 50, title: "30GB以上", description: "ほぼ使い放題が必要" },
+              { value: "unknown" as const, title: "わからない", description: "10GB前後として仮定します" },
+            ].map((option) => (
+              <ChoiceButton
+                key={String(option.value)}
+                selected={answers.data_usage_gb === option.value}
+                onClick={() => update("data_usage_gb", option.value)}
+                title={option.title}
+                description={option.description}
+              />
+            ))}
+          </div>
+        );
+
+      case "call":
+        return (
+          <div className="grid gap-3">
+            {[
+              { value: "none", title: "ほとんどしない", description: "月に1〜2回以下" },
+              { value: "few_monthly", title: "月数回", description: "予約、仕事、家族連絡など必要な時だけ" },
+              { value: "few_weekly", title: "週数回", description: "短い電話を定期的にかける" },
+              { value: "daily", title: "ほぼ毎日", description: "かけ放題の有無を重く見ます" },
+            ].map((option) => (
+              <ChoiceButton
+                key={option.value}
+                selected={answers.call_frequency === option.value}
+                onClick={() => update("call_frequency", option.value as DiagnosisAnswers["call_frequency"])}
+                title={option.title}
+                description={option.description}
+              />
+            ))}
+          </div>
+        );
+
+      case "family":
+        return (
+          <div className="grid gap-3">
+            {[
+              { count: 0, title: "いない / 家族割なし", description: "自分の回線だけで見ます" },
+              { count: 1, title: "家族1人と同じ", description: "合計2回線" },
+              { count: 2, title: "家族2人と同じ", description: "合計3回線" },
+              { count: 3, title: "家族3人以上と同じ", description: "合計4回線以上" },
+            ].map((option) => (
+              <ChoiceButton
+                key={option.count}
+                selected={answers.family_lines_count === option.count}
+                onClick={() => update("family_lines_count", option.count)}
+                title={option.title}
+                description={option.description}
+              />
+            ))}
+          </div>
+        );
+
+      case "familySwitch":
+        return (
+          <div className="grid gap-3">
+            <ChoiceButton
+              selected={answers.family_all_switching}
+              onClick={() => update("family_all_switching", true)}
+              title="家族も一緒に変える"
+              description="家族割の崩れを小さく見ます"
+            />
+            <ChoiceButton
+              selected={!answers.family_all_switching}
+              onClick={() => update("family_all_switching", false)}
+              title="自分だけ変えたい"
+              description="家族の請求増リスクを判定に入れます"
             />
           </div>
         );
 
-      // Q3: データ使用量
-      case 3:
+      case "installment":
         return (
-          <div>
-            <h2 className="text-xl font-bold text-slate-800 mb-2">月に使うデータ量は？</h2>
-            <p className="text-sm text-slate-500 mb-6">設定 → モバイル通信 → 通信量で確認できます。</p>
-            <div className="space-y-3">
-              {[
-                { value: 3, label: "3GB未満", sub: "主にWi-Fi使用・LINEや調べものくらい" },
-                { value: 7, label: "3〜10GB", sub: "動画をたまに見る・外出先でよく使う" },
-                { value: 20, label: "10〜30GB", sub: "動画をよく見る・テザリングも使う" },
-                { value: 50, label: "30GB以上", sub: "ヘビーユーザー・ほぼ使い放題" },
-                { value: "unknown" as const, label: "わからない", sub: "確認していない" },
-              ].map((opt) => (
-                <SelectButton
-                  key={String(opt.value)}
-                  selected={answers.data_usage_gb === opt.value}
-                  onClick={() => update("data_usage_gb", opt.value)}
-                >
-                  <span className="font-semibold">{opt.label}</span>
-                  <span className="text-slate-400 text-xs ml-2">{opt.sub}</span>
-                </SelectButton>
-              ))}
-            </div>
+          <div className="grid gap-3">
+            {[
+              { months: 0, title: "完済済み / 一括購入", description: "端末代の支払いは残っていない" },
+              { months: 6, title: "残り半年くらい", description: "待つ選択肢も判定します" },
+              { months: 12, title: "残り1年くらい", description: "次のタイミング判定になりやすい条件です" },
+              { months: 24, title: "残り1年以上", description: "乗り換え摩擦を強めに見ます" },
+            ].map((option) => (
+              <ChoiceButton
+                key={option.months}
+                selected={answers.device_installment_remaining_months === option.months}
+                onClick={() => update("device_installment_remaining_months", option.months)}
+                title={option.title}
+                description={option.description}
+              />
+            ))}
           </div>
         );
 
-      // Q4: 通話頻度
-      case 4:
+      case "support":
         return (
-          <div>
-            <h2 className="text-xl font-bold text-slate-800 mb-2">電話をかける頻度は？</h2>
-            <p className="text-sm text-slate-500 mb-6">LINEやZoomは除く、通常の電話（050/080など）で考えてください。</p>
-            <div className="space-y-3">
-              {[
-                { value: "none", label: "ほとんどしない", sub: "月に1〜2回以下" },
-                { value: "few_monthly", label: "月数回", sub: "仕事や予約など必要なときだけ" },
-                { value: "few_weekly", label: "週数回", sub: "定期的にかける" },
-                { value: "daily", label: "ほぼ毎日", sub: "仕事や家族との連絡など頻繁" },
-              ].map((opt) => (
-                <SelectButton
-                  key={opt.value}
-                  selected={answers.call_frequency === opt.value}
-                  onClick={() => update("call_frequency", opt.value as DiagnosisAnswers["call_frequency"])}
-                >
-                  <span className="font-semibold">{opt.label}</span>
-                  <span className="text-slate-400 text-xs ml-2">{opt.sub}</span>
-                </SelectButton>
-              ))}
-            </div>
+          <FourPointScale
+            value={answers.store_support_priority}
+            labels={SUPPORT_LABELS}
+            onChange={(value) => update("store_support_priority", value)}
+          />
+        );
+
+      case "quality":
+        return (
+          <FourPointScale
+            value={answers.quality_sensitivity}
+            labels={QUALITY_LABELS}
+            onChange={(value) => update("quality_sensitivity", value)}
+          />
+        );
+
+      case "points":
+        return (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {POINT_OPTIONS.map((option) => {
+              const selected = answers.point_ecosystems.includes(option.id);
+              return (
+                <ChoiceButton
+                  key={option.id}
+                  selected={selected}
+                  onClick={() => {
+                    if (option.id === "none") {
+                      update("point_ecosystems", selected ? [] : ["none"]);
+                      return;
+                    }
+                    const withoutCurrent = answers.point_ecosystems.filter(
+                      (point) => point !== "none" && point !== option.id
+                    );
+                    update("point_ecosystems", selected ? withoutCurrent : [...withoutCurrent, option.id]);
+                  }}
+                  title={option.label}
+                />
+              );
+            })}
           </div>
         );
 
-      // Q5: 家族割
-      case 5:
+      case "migration":
         return (
-          <div>
-            <h2 className="text-xl font-bold text-slate-800 mb-2">家族と同じキャリアで契約している？</h2>
-            <p className="text-sm text-slate-500 mb-6">家族割の適用状況を確認するための質問です。</p>
-            <div className="space-y-3">
-              {[
-                { count: 0, label: "いない / 家族割なし", sub: "1人で契約" },
-                { count: 1, label: "家族1人と同じキャリア", sub: "2回線で家族割" },
-                { count: 2, label: "家族2人と同じキャリア", sub: "3回線で家族割" },
-                { count: 3, label: "家族3人以上と同じキャリア", sub: "4回線以上で家族割" },
-              ].map((opt) => (
-                <SelectButton
-                  key={opt.count}
-                  selected={answers.family_lines_count === opt.count}
-                  onClick={() => update("family_lines_count", opt.count)}
-                >
-                  <span className="font-semibold">{opt.label}</span>
-                  <span className="text-slate-400 text-xs ml-2">{opt.sub}</span>
-                </SelectButton>
-              ))}
-            </div>
+          <div className="grid gap-3">
+            {[
+              { value: "self", title: "自分でできる", description: "オンライン申込やeSIM設定も抵抗が少ない" },
+              { value: "support_needed", title: "不安だけどできる", description: "手順がはっきりしていれば進められる" },
+              { value: "impossible", title: "自分では難しい", description: "店舗サポートありの選択肢を重めに見ます" },
+            ].map((option) => (
+              <ChoiceButton
+                key={option.value}
+                selected={answers.migration_tolerance === option.value}
+                onClick={() => update("migration_tolerance", option.value as DiagnosisAnswers["migration_tolerance"])}
+                title={option.title}
+                description={option.description}
+              />
+            ))}
           </div>
         );
-
-      // Q5a: 家族全員で変える？（家族ありの場合のみ）
-      case 6:
-        if (answers.family_lines_count > 0) {
-          return (
-            <div>
-              <h2 className="text-xl font-bold text-slate-800 mb-2">家族全員で一緒に乗り換える予定？</h2>
-              <p className="text-sm text-slate-500 mb-6">家族割が崩れるかどうかの判定に使います。</p>
-              <div className="space-y-3">
-                {[
-                  { value: true, label: "全員で変える予定", sub: "家族みんなで新しいキャリアへ" },
-                  { value: false, label: "自分だけ変えたい", sub: "家族は今のキャリアのまま" },
-                ].map((opt) => (
-                  <SelectButton
-                    key={String(opt.value)}
-                    selected={answers.family_all_switching === opt.value}
-                    onClick={() => update("family_all_switching", opt.value)}
-                  >
-                    <span className="font-semibold">{opt.label}</span>
-                    <span className="text-slate-400 text-xs ml-2">{opt.sub}</span>
-                  </SelectButton>
-                ))}
-              </div>
-            </div>
-          );
-        }
-        // 家族なしの場合はスキップして次に
-        return renderInstallmentStep();
-
-      // 端末残債ステップ
-      case 7:
-        return renderInstallmentStep();
-
-      // Q7: 店舗サポート重要度
-      case 8:
-        return (
-          <div>
-            <h2 className="text-xl font-bold text-slate-800 mb-2">店舗でのサポートはどれくらい重要？</h2>
-            <p className="text-sm text-slate-500 mb-8">故障・機種変更・手続き変更を店頭でしたいかどうかで選んでください。</p>
-            <div className="mb-4 text-center">
-              <span className="text-lg font-bold text-slate-800">
-                {["", "どうでもよい", "できればあった方がいい", "重要", "必ず必要"][answers.store_support_priority]}
-              </span>
-            </div>
-            <SliderInput
-              value={answers.store_support_priority}
-              min={1}
-              max={4}
-              step={1}
-              labels={["どうでもよい", "↑", "↑", "必ず必要"]}
-              onChange={(v) => update("store_support_priority", v as 1 | 2 | 3 | 4)}
-            />
-          </div>
-        );
-
-      // Q8: 通信品質
-      case 9:
-        return (
-          <div>
-            <h2 className="text-xl font-bold text-slate-800 mb-2">通信速度・品質への不安は？</h2>
-            <p className="text-sm text-slate-500 mb-8">格安SIMは大手より混雑時に遅くなりやすいです。</p>
-            <div className="mb-4 text-center">
-              <span className="text-lg font-bold text-slate-800">
-                {["", "気にしない", "少し気になる", "かなり気になる", "大手と同水準でないと嫌"][answers.quality_sensitivity]}
-              </span>
-            </div>
-            <SliderInput
-              value={answers.quality_sensitivity}
-              min={1}
-              max={4}
-              step={1}
-              labels={["気にしない", "↑", "↑", "大手品質必須"]}
-              onChange={(v) => update("quality_sensitivity", v as 1 | 2 | 3 | 4)}
-            />
-          </div>
-        );
-
-      // Q9: ポイント経済圏
-      case 10: {
-        const isLast = true;
-        return (
-          <div>
-            <h2 className="text-xl font-bold text-slate-800 mb-2">よく使うポイントは？（複数可）</h2>
-            <p className="text-sm text-slate-500 mb-6">キャリアとポイント経済圏の相性を判定します。</p>
-            <div className="space-y-3">
-              {POINT_OPTIONS.map((opt) => {
-                const selected = answers.point_ecosystems.includes(opt.id);
-                return (
-                  <button
-                    key={opt.id}
-                    onClick={() => {
-                      if (opt.id === "none") {
-                        update("point_ecosystems", selected ? [] : ["none"]);
-                      } else {
-                        const without = answers.point_ecosystems.filter(
-                          (p) => p !== "none" && p !== opt.id
-                        );
-                        update(
-                          "point_ecosystems",
-                          selected ? without : [...without, opt.id]
-                        );
-                      }
-                    }}
-                    className={`w-full text-left px-4 py-3.5 rounded-xl border-2 font-medium transition-all text-sm flex items-center gap-3 ${
-                      selected
-                        ? "border-blue-500 bg-blue-50 text-blue-700"
-                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                    }`}
-                  >
-                    <span className="text-xl">{opt.icon}</span>
-                    <span>{opt.label}</span>
-                    {selected && <span className="ml-auto text-blue-500 font-bold">✓</span>}
-                  </button>
-                );
-              })}
-            </div>
-            {isLast && (
-              <button
-                onClick={handleFinish}
-                className="mt-8 w-full py-4 rounded-2xl bg-blue-600 text-white font-bold text-lg hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-200"
-              >
-                診断結果を見る →
-              </button>
-            )}
-          </div>
-        );
-      }
-
-      default:
-        return null;
     }
   };
 
-  function renderInstallmentStep() {
-    return (
-      <div>
-        <h2 className="text-xl font-bold text-slate-800 mb-2">今使っている端末の支払いは？</h2>
-        <p className="text-sm text-slate-500 mb-6">分割払い中の場合、乗り換えても残債の支払いは続きます。</p>
-        <div className="space-y-3">
-          {[
-            { months: 0, label: "完済済み / 一括購入", sub: "端末代の支払いは終わっている" },
-            { months: 6, label: "残り半年程度", sub: "6ヶ月以内に完済予定" },
-            { months: 12, label: "残り1年程度", sub: "6〜12ヶ月ほど残っている" },
-            { months: 24, label: "残り1年以上", sub: "まだ12ヶ月以上ある" },
-          ].map((opt) => (
-            <SelectButton
-              key={opt.months}
-              selected={answers.device_installment_remaining_months === opt.months}
-              onClick={() => update("device_installment_remaining_months", opt.months)}
-            >
-              <span className="font-semibold">{opt.label}</span>
-              <span className="text-slate-400 text-xs ml-2">{opt.sub}</span>
-            </SelectButton>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // 最後のステップ（ポイント）はボタンを非表示（内部ボタンで進む）
-  const isLastStep = step === totalSteps;
+  const summary = [
+    {
+      label: "現在",
+      value: answers.current_carrier
+        ? CARRIERS.find((carrier) => carrier.id === answers.current_carrier)?.label ?? answers.current_carrier
+        : "未選択",
+    },
+    { label: "月額", value: currency(answers.current_monthly_fee_yen) },
+    {
+      label: "データ",
+      value: answers.data_usage_gb === "unknown" ? "不明" : `${answers.data_usage_gb}GB`,
+    },
+    {
+      label: "家族",
+      value: answers.family_lines_count === 0 ? "なし" : `${answers.family_lines_count + 1}回線`,
+    },
+  ];
 
   return (
-    <div className={`transition-opacity duration-200 ${isAnimating ? "opacity-0" : "opacity-100"}`}>
-      <ProgressBar step={step} total={totalSteps} />
+    <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="rounded-lg border border-zinc-200 bg-white shadow-sm">
+        <div className="border-b border-zinc-100 px-5 py-4 sm:px-6">
+          <div className="mb-3 flex items-center justify-between text-xs text-zinc-500">
+            <span>
+              {activeStepIndex + 1}/{steps.length} {meta.label}
+            </span>
+            <span>{progress}%</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
+            <div className="h-full rounded-full bg-amber-500 transition-all" style={{ width: `${progress}%` }} />
+          </div>
+        </div>
 
-      {renderStep()}
+        <div className="px-5 py-6 sm:px-6 sm:py-7">
+          <div className="mb-6">
+            <h1 className="text-2xl font-semibold leading-tight text-zinc-950">{meta.title}</h1>
+            <p className="mt-2 text-sm leading-6 text-zinc-600">{meta.hint}</p>
+          </div>
 
-      {/* ナビゲーション */}
-      {!isLastStep && (
-        <div className="mt-8 flex justify-between items-center">
+          {renderStep()}
+        </div>
+
+        <div className="sticky bottom-0 z-10 flex items-center justify-between gap-3 border-t border-zinc-100 bg-white/95 px-5 py-4 backdrop-blur sm:px-6">
           <button
+            type="button"
             onClick={goPrev}
-            disabled={step === 1}
-            className="px-4 py-2 text-sm text-slate-400 hover:text-slate-600 disabled:invisible transition-colors"
+            disabled={activeStepIndex === 0}
+            className="inline-flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-950 disabled:invisible"
           >
-            ← 戻る
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            戻る
           </button>
-          <button
-            onClick={goNext}
-            disabled={!canProceed()}
-            className="px-8 py-3 rounded-2xl bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 active:scale-95 transition-all"
-          >
-            次へ →
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={reset}
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100"
+            >
+              <RotateCcw className="h-4 w-4" aria-hidden="true" />
+              リセット
+            </button>
+            <button
+              type="button"
+              onClick={goNext}
+              disabled={!canProceed}
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:bg-zinc-200 disabled:text-zinc-500"
+            >
+              {activeStepIndex === steps.length - 1 ? "結果を見る" : "次へ"}
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
         </div>
-      )}
-      {step > 1 && isLastStep && (
-        <div className="mt-4">
-          <button onClick={goPrev} className="text-sm text-slate-400 hover:text-slate-600">
-            ← 戻る
-          </button>
+      </div>
+
+      <aside className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm lg:sticky lg:top-5 lg:h-fit">
+        <div className="flex items-center gap-2">
+          <Gauge className="h-4 w-4 text-zinc-700" aria-hidden="true" />
+          <p className="text-sm font-semibold text-zinc-950">いま見ている条件</p>
         </div>
-      )}
-    </div>
+        <dl className="mt-4 divide-y divide-zinc-100">
+          {summary.map((item) => (
+            <div key={item.label} className="flex items-center justify-between gap-3 py-3">
+              <dt className="text-xs text-zinc-500">{item.label}</dt>
+              <dd className="text-right text-sm font-medium text-zinc-950">{item.value}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className="mt-4 rounded-lg bg-stone-50 p-3">
+          <div className="flex gap-2">
+            <CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" aria-hidden="true" />
+            <p className="text-xs leading-5 text-zinc-600">
+              Q1〜Q3以外は近い答えで進めて構いません。判定では不確実な条件も明示します。
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 flex gap-2 text-xs text-zinc-500">
+          <ReceiptText className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>入力内容はブラウザ内に一時保存されます。</span>
+        </div>
+      </aside>
+    </section>
   );
 }
