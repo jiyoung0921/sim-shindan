@@ -1,10 +1,28 @@
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const plansPath = path.join(rootDir, "public/data/plans.json");
+
+async function loadLocalEnv() {
+  try {
+    const content = await readFile(path.join(rootDir, ".env.local"), "utf8");
+    for (const line of content.split(/\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
+      const index = trimmed.indexOf("=");
+      const key = trimmed.slice(0, index);
+      const value = trimmed.slice(index + 1);
+      process.env[key] ??= value;
+    }
+  } catch {
+    // CI uses real environment variables; .env.local is only for local operations.
+  }
+}
+
+await loadLocalEnv();
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
