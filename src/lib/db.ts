@@ -352,7 +352,7 @@ export async function recordPlanClick(input: PlanClickInput): Promise<void> {
     return;
   }
 
-  await sb.from("plan_clicks").insert({
+  const { error } = await sb.from("plan_clicks").insert({
     plan_id: input.plan_id,
     session_token: input.session_token ?? null,
     verdict: input.verdict ?? null,
@@ -361,6 +361,10 @@ export async function recordPlanClick(input: PlanClickInput): Promise<void> {
     referrer: input.referrer ?? null,
     user_agent_hint: input.user_agent_hint ?? null,
   });
+
+  if (error) {
+    console.warn("[PlanClick] failed to record", error.message);
+  }
 }
 
 export interface AnalyticsEventInput {
@@ -380,7 +384,7 @@ export async function recordAnalyticsEvent(input: AnalyticsEventInput): Promise<
     return;
   }
 
-  await sb.from("analytics_events").insert({
+  const { error } = await sb.from("analytics_events").insert({
     event_name: input.event_name,
     session_token: input.session_token ?? null,
     step_index: input.step_index ?? null,
@@ -389,6 +393,10 @@ export async function recordAnalyticsEvent(input: AnalyticsEventInput): Promise<
     metadata: input.metadata ?? {},
     user_agent_hint: input.user_agent_hint ?? null,
   });
+
+  if (error) {
+    console.warn("[AnalyticsEvent] failed to record", error.message);
+  }
 }
 
 // ─── Sessions ───
