@@ -78,4 +78,36 @@ if (error) {
   process.exit(1);
 }
 
-console.log(`Seeded ${rows.length} plans from ${path.relative(rootDir, plansPath)}.`);
+const seededIds = new Set(rows.map((row) => row.id));
+const { data: existingRows, error: selectError } = await supabase
+  .from("plans")
+  .select("id,status,plan_status");
+
+if (selectError) {
+  console.error(`Failed to inspect existing plans: ${selectError.message}`);
+  process.exit(1);
+}
+
+const staleIds = (existingRows ?? [])
+  .map((row) => row.id)
+  .filter((id) => typeof id === "string" && !seededIds.has(id));
+
+if (staleIds.length > 0) {
+  const { error: archiveError } = await supabase
+    .from("plans")
+    .update({
+      status: "archived",
+      plan_status: "ended",
+      updated_at: new Date().toISOString(),
+    })
+    .in("id", staleIds);
+
+  if (archiveError) {
+    console.error(`Failed to archive stale plans: ${archiveError.message}`);
+    process.exit(1);
+  }
+}
+
+console.log(
+  `Seeded ${rows.length} plans from ${path.relative(rootDir, plansPath)}. Archived ${staleIds.length} stale plans.`
+);

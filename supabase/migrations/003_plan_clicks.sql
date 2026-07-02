@@ -2,10 +2,8 @@
 -- 公式リンククリック計測
 -- ============================================================
 
-create extension if not exists "uuid-ossp";
-
 create table if not exists plan_clicks (
-  id              uuid primary key default uuid_generate_v4(),
+  id              uuid primary key default gen_random_uuid(),
   plan_id         text not null,
   session_token   text,
   verdict         text,

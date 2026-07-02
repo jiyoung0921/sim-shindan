@@ -537,11 +537,11 @@
         "name": "おうち割 光セット（A）",
         "monthly_discount_yen": 1650,
         "condition": "SoftBank 光またはSoftBank Airと同時契約",
+        "exclusive_group": "ymobile_family_or_fixed_line",
         "condition_structured": {
           "requires_fixed_line": true
         },
-        "is_permanent": true,
-        "exclusive_group": "ymobile_family_or_fixed_line"
+        "is_permanent": true
       },
       {
         "name": "PayPayカード割",
@@ -938,11 +938,11 @@
         "name": "おうち割 光セット（A）",
         "monthly_discount_yen": 1650,
         "condition": "SoftBank 光またはSoftBank Airと同時契約",
+        "exclusive_group": "ymobile_family_or_fixed_line",
         "condition_structured": {
           "requires_fixed_line": true
         },
-        "is_permanent": true,
-        "exclusive_group": "ymobile_family_or_fixed_line"
+        "is_permanent": true
       },
       {
         "name": "PayPayカード割",
