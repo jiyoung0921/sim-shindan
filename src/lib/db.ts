@@ -6,6 +6,7 @@
 
 import { getSupabaseAdmin, getSupabase, isSupabaseConfigured } from "./supabase";
 import { PlanAvailability, PlanRecord, DiagnosisAnswers, DiagnosisResult } from "./types";
+import staticPlans from "../../public/data/plans.json";
 
 // ─── Plans ───
 
@@ -538,13 +539,9 @@ export async function dismissSignal(id: string): Promise<boolean> {
 // ─── ユーティリティ ───
 
 async function fetchStaticPlans(): Promise<PlanRecord[]> {
-  // サーバーサイド: ファイルシステムから読み込み
+  // サーバーサイド: OpenNext/Cloudflare Workers にはNode fsがないため、ビルド時JSONを使う。
   if (typeof window === "undefined") {
-    const fs = await import("fs/promises");
-    const path = await import("path");
-    const filePath = path.join(process.cwd(), "public", "data", "plans.json");
-    const raw = await fs.readFile(filePath, "utf-8");
-    return JSON.parse(raw) as PlanRecord[];
+    return staticPlans as PlanRecord[];
   }
   // クライアントサイド: fetchで取得
   const res = await fetch("/data/plans.json");
