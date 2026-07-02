@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "iconoir-react";
 import DiagnosisFlow from "@/components/DiagnosisFlow";
 
 export const metadata: Metadata = {
@@ -18,7 +18,7 @@ export default function DiagnosisPage() {
           href="/"
           className="inline-flex items-center gap-2 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-950"
         >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          <ArrowLeft className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
           トップ
         </Link>
         <span className="text-sm font-semibold text-zinc-950">スマホ料金診断</span>

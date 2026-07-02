@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Send } from "lucide-react";
+import { Send } from "iconoir-react";
 
 interface FeedbackWidgetProps {
   sessionId: string;
@@ -91,7 +91,7 @@ export default function FeedbackWidget({ sessionId }: FeedbackWidgetProps) {
             disabled={loading}
             className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:bg-zinc-200 disabled:text-zinc-500"
           >
-            <Send className="h-4 w-4" aria-hidden="true" />
+            <Send className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
             {loading ? "送信中" : "送信する"}
           </button>
         </div>

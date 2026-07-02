@@ -5,7 +5,7 @@
  */
 
 import { getSupabaseAdmin, getSupabase, isSupabaseConfigured } from "./supabase";
-import { PlanRecord, DiagnosisAnswers, DiagnosisResult } from "./types";
+import { PlanAvailability, PlanRecord, DiagnosisAnswers, DiagnosisResult } from "./types";
 
 // ─── Plans ───
 
@@ -69,6 +69,29 @@ export async function updatePlanStatus(
     .eq("id", planId);
   if (error) {
     console.error("[db] updatePlanStatus error:", error.message);
+    return false;
+  }
+  return true;
+}
+
+export async function updatePlanAvailability(
+  planId: string,
+  planStatus: PlanAvailability
+): Promise<boolean> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return false;
+
+  const now = new Date().toISOString();
+  const { error } = await sb
+    .from("plans")
+    .update({
+      plan_status: planStatus,
+      last_verified_at: now,
+    })
+    .eq("id", planId);
+
+  if (error) {
+    console.error("[db] updatePlanAvailability error:", error.message);
     return false;
   }
   return true;
@@ -156,11 +179,24 @@ export async function approveDiff(
     .single();
   if (diffErr || !diff) return false;
 
+  const now = new Date().toISOString();
+
   // plans テーブルへ反映
+  // after_data はスクレイパー由来のネスト形式（PlanRecord）か、
+  // DB由来のフラット行形式のどちらか。ネスト形式はフラット行へ変換してから upsert する。
   const planData = diff.after_data as Record<string, unknown>;
-  const { error: planErr } = await sb
-    .from("plans")
-    .upsert({ ...planData, status: "published" });
+  const rowBase =
+    "evidence" in planData
+      ? planRecordToDbRow({ ...(planData as unknown as PlanRecord), status: "published" })
+      : { ...planData, status: "published" };
+  const row = {
+    ...rowBase,
+    status: "published",
+    reviewed_by: reviewedBy,
+    reviewed_at: now,
+    last_verified_at: now,
+  };
+  const { error: planErr } = await sb.from("plans").upsert(row);
   if (planErr) {
     console.error("[db] approveDiff plan upsert error:", planErr.message);
     return false;
@@ -170,7 +206,7 @@ export async function approveDiff(
   await sb.from("plan_diffs").update({
     status: "approved",
     reviewed_by: reviewedBy,
-    reviewed_at: new Date().toISOString(),
+    reviewed_at: now,
     review_note: reviewNote,
   }).eq("id", diffId);
 
@@ -188,8 +224,13 @@ export async function approveDiff(
     after_base_fee: (planData.billing as Record<string, unknown>)?.base_fee_yen as number,
     diff_id: diffId,
     approved_by: reviewedBy,
-    source_url: (planData.evidence as Record<string, unknown>)?.source_url as string ?? "",
+    source_url:
+      "evidence" in planData
+        ? (((planData.evidence as Record<string, unknown>)?.source_url as string) ?? "")
+        : ((planData.source_url as string) ?? ""),
   });
+
+  await triggerPlansExport(diffId);
 
   return true;
 }
@@ -208,6 +249,34 @@ export async function rejectDiff(
     review_note: reviewNote,
   }).eq("id", diffId);
   return !error;
+}
+
+async function triggerPlansExport(diffId: string): Promise<void> {
+  const token = process.env.GITHUB_DISPATCH_TOKEN;
+  const repository = process.env.GITHUB_REPOSITORY;
+  if (!token || !repository) return;
+
+  try {
+    const res = await fetch(`https://api.github.com/repos/${repository}/dispatches`, {
+      method: "POST",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+      body: JSON.stringify({
+        event_type: "plans_export",
+        client_payload: { diff_id: diffId },
+      }),
+    });
+
+    if (!res.ok) {
+      console.warn("[db] triggerPlansExport failed:", res.status, await res.text());
+    }
+  } catch (error) {
+    console.warn("[db] triggerPlansExport error:", error);
+  }
 }
 
 // ─── Fetch States（ETag管理）───
@@ -240,6 +309,88 @@ export async function upsertFetchState(state: FetchState): Promise<void> {
   });
 }
 
+// ─── Official Clicks ───
+
+export interface PlanClickInput {
+  plan_id: string;
+  target_url: string;
+  session_token?: string;
+  verdict?: string;
+  rank?: number;
+  referrer?: string;
+  user_agent_hint?: string;
+}
+
+export async function getPlanForRedirect(planId: string): Promise<{ id: string; source_url: string } | null> {
+  if (isSupabaseConfigured()) {
+    const sb = getSupabase();
+    if (sb) {
+      const { data, error } = await sb
+        .from("plans")
+        .select("id,source_url")
+        .eq("id", planId)
+        .eq("status", "published")
+        .eq("plan_status", "active")
+        .single();
+      if (!error && data?.source_url) {
+        return { id: data.id as string, source_url: data.source_url as string };
+      }
+    }
+  }
+
+  const plans = await fetchStaticPlans();
+  const plan = plans.find(
+    (item) => item.id === planId && item.status === "published" && item.plan_status === "active"
+  );
+  return plan ? { id: plan.id, source_url: plan.evidence.source_url } : null;
+}
+
+export async function recordPlanClick(input: PlanClickInput): Promise<void> {
+  const sb = getSupabaseAdmin();
+  if (!sb) {
+    console.log("[PlanClick]", input.plan_id, input.target_url);
+    return;
+  }
+
+  await sb.from("plan_clicks").insert({
+    plan_id: input.plan_id,
+    session_token: input.session_token ?? null,
+    verdict: input.verdict ?? null,
+    rank: input.rank ?? null,
+    target_url: input.target_url,
+    referrer: input.referrer ?? null,
+    user_agent_hint: input.user_agent_hint ?? null,
+  });
+}
+
+export interface AnalyticsEventInput {
+  event_name: string;
+  session_token?: string;
+  step_index?: number;
+  verdict?: string;
+  plan_id?: string;
+  metadata?: Record<string, unknown>;
+  user_agent_hint?: string;
+}
+
+export async function recordAnalyticsEvent(input: AnalyticsEventInput): Promise<void> {
+  const sb = getSupabaseAdmin();
+  if (!sb) {
+    console.log("[AnalyticsEvent]", input.event_name, input.session_token ?? "");
+    return;
+  }
+
+  await sb.from("analytics_events").insert({
+    event_name: input.event_name,
+    session_token: input.session_token ?? null,
+    step_index: input.step_index ?? null,
+    verdict: input.verdict ?? null,
+    plan_id: input.plan_id ?? null,
+    metadata: input.metadata ?? {},
+    user_agent_hint: input.user_agent_hint ?? null,
+  });
+}
+
 // ─── Sessions ───
 
 export async function saveSession(
@@ -252,18 +403,22 @@ export async function saveSession(
   if (!sb) return; // Supabase未設定時はスキップ
 
   const best = result.recommendations[0];
-  await sb.from("diagnosis_sessions").upsert({
-    session_token: token,
-    answers,
-    verdict: result.verdict,
-    recommended_action: result.recommended_action,
-    persona_type: result.persona_type,
-    top_plan_id: best?.plan.id ?? null,
-    cash_saving: best?.cash_saving_per_month ?? null,
-    completed: true,
-    completed_at: new Date().toISOString(),
-    user_agent_hint: userAgentHint ?? null,
-  });
+  // RLS は INSERT のみ許可しているため、衝突時は UPDATE せず無視する
+  await sb.from("diagnosis_sessions").upsert(
+    {
+      session_token: token,
+      answers,
+      verdict: result.verdict,
+      recommended_action: result.recommended_action,
+      persona_type: result.persona_type,
+      top_plan_id: best?.plan.id ?? null,
+      cash_saving: best?.cash_saving_per_month ?? null,
+      completed: true,
+      completed_at: new Date().toISOString(),
+      user_agent_hint: userAgentHint ?? null,
+    },
+    { onConflict: "session_token", ignoreDuplicates: true }
+  );
 }
 
 // ─── Feedbacks ───
@@ -346,7 +501,7 @@ export async function insertSignal(signal: NewServiceSignal): Promise<void> {
 export interface NewServiceSignalRow extends NewServiceSignal {
   id: string;
   created_at: string;
-  dismissed?: boolean;
+  status?: "unreviewed" | "confirmed" | "rejected" | "noise";
 }
 
 export async function getSignals(limit = 50): Promise<NewServiceSignalRow[]> {
@@ -367,7 +522,7 @@ export async function dismissSignal(id: string): Promise<boolean> {
   if (!sb) return false;
   const { error } = await sb
     .from("new_service_signals")
-    .update({ dismissed: true })
+    .update({ status: "noise", reviewed_at: new Date().toISOString() })
     .eq("id", id);
   return !error;
 }
@@ -425,6 +580,8 @@ function dbRowToPlanRecord(row: Record<string, unknown>): PlanRecord {
       notes_hash: row.notes_hash as string,
     },
     status: row.status as PlanRecord["status"],
+    plan_status: (row.plan_status as PlanRecord["plan_status"]) ?? "unknown",
+    last_verified_at: (row.last_verified_at as string | undefined) ?? (row.fetched_at as string),
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
   };
@@ -459,5 +616,7 @@ function planRecordToDbRow(plan: PlanRecord): Record<string, unknown> {
     snapshot_path: plan.evidence.snapshot_path,
     notes_hash: plan.evidence.notes_hash,
     status: plan.status,
+    plan_status: plan.plan_status ?? "unknown",
+    last_verified_at: plan.last_verified_at ?? plan.evidence.fetched_at,
   };
 }

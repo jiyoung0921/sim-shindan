@@ -1,42 +1,80 @@
 [
   {
-    "id": "docomo_eximo_2026",
+    "id": "docomo_max_2026",
     "carrier_id": "docomo",
     "brand_id": "docomo_main",
-    "plan_name": "eximo",
+    "plan_name": "ドコモ MAX",
     "plan_type": "MNO",
     "billing": {
-      "base_fee_yen": 4565,
+      "base_fee_yen": 5698,
       "tiers": [
-        { "up_to_gb": 1, "monthly_fee_yen": 4565, "label": "1GBまで" },
-        { "up_to_gb": 3, "monthly_fee_yen": 5665, "label": "3GBまで" },
-        { "up_to_gb": "unlimited", "monthly_fee_yen": 7315, "label": "無制限" }
+        {
+          "up_to_gb": 1,
+          "monthly_fee_yen": 5698,
+          "label": "1GBまで"
+        },
+        {
+          "up_to_gb": 3,
+          "monthly_fee_yen": 6798,
+          "label": "3GBまで"
+        },
+        {
+          "up_to_gb": "unlimited",
+          "monthly_fee_yen": 8448,
+          "label": "無制限"
+        }
       ],
-      "call_option_unlimited_yen": 1100,
-      "call_option_limited_yen": 550,
+      "call_option_unlimited_yen": 1980,
+      "call_option_limited_yen": 880,
       "initial_fee_yen": 0,
       "cancellation_fee_yen": 0
     },
     "discounts": [
       {
-        "name": "みんなドコモ割（3回線以上）",
-        "monthly_discount_yen": 1100,
-        "condition": "ドコモ回線を3回線以上ご契約",
-        "condition_structured": { "min_lines": 3 },
+        "name": "みんなドコモ割（2回線）",
+        "monthly_discount_yen": 550,
+        "condition": "同一ファミリー割引グループ内でドコモ回線を2回線契約",
+        "exclusive_group": "docomo_minna_discount",
+        "condition_structured": {
+          "min_lines": 2
+        },
         "is_permanent": true
       },
       {
-        "name": "ドコモ光セット割",
-        "monthly_discount_yen": 1100,
-        "condition": "ドコモ光またはhome 5Gと同時契約",
-        "condition_structured": { "requires_fixed_line": true },
+        "name": "みんなドコモ割（3回線以上）",
+        "monthly_discount_yen": 1210,
+        "condition": "同一ファミリー割引グループ内でドコモ回線を3回線以上契約",
+        "exclusive_group": "docomo_minna_discount",
+        "condition_structured": {
+          "min_lines": 3
+        },
+        "is_permanent": true
+      },
+      {
+        "name": "ドコモ光セット割／home 5G セット割",
+        "monthly_discount_yen": 1210,
+        "condition": "ドコモ光またはhome 5Gと同一ファミリー割引グループ",
+        "condition_structured": {
+          "requires_fixed_line": true
+        },
         "is_permanent": true
       },
       {
         "name": "dカードお支払割",
-        "monthly_discount_yen": 187,
-        "condition": "dカードGOLDで支払い",
-        "condition_structured": { "requires_card": "d_card_gold" },
+        "monthly_discount_yen": 550,
+        "condition": "dカード PLATINUM / GOLD / GOLD U などで支払い",
+        "condition_structured": {
+          "requires_card": "d_card"
+        },
+        "is_permanent": true
+      },
+      {
+        "name": "ドコモでんきセット割",
+        "monthly_discount_yen": 110,
+        "condition": "ドコモでんき契約",
+        "condition_structured": {
+          "requires_electricity": true
+        },
         "is_permanent": true
       }
     ],
@@ -55,50 +93,80 @@
       "store_support": "full",
       "esim_available": true,
       "sim_only_available": true,
-      "payment_methods": ["クレジットカード", "口座振替", "dカード"]
+      "payment_methods": [
+        "クレジットカード",
+        "口座振替",
+        "dカード"
+      ]
     },
-    "device": { "bundled_sales": true, "installment_available": true },
+    "device": {
+      "bundled_sales": true,
+      "installment_available": true
+    },
     "evidence": {
-      "source_url": "https://www.nttdocomo.co.jp/charge/eximo/",
+      "source_url": "https://www.docomo.ne.jp/charge/docomo_max/",
       "fetched_at": "2026-06-07T00:00:00+09:00",
-      "published_at": "2023-06-01",
-      "snapshot_path": "snapshots/docomo_eximo_20260607.html.gz",
-      "notes_hash": "placeholder"
+      "published_at": "2025-06-05",
+      "snapshot_path": "",
+      "notes_hash": ""
     },
     "status": "published",
     "created_at": "2026-06-07T00:00:00+09:00",
-    "updated_at": "2026-06-07T00:00:00+09:00"
+    "updated_at": "2026-06-07T00:00:00+09:00",
+    "plan_status": "active",
+    "last_verified_at": "2026-07-02T00:00:00+09:00"
   },
   {
-    "id": "docomo_eximo_mini_2026",
+    "id": "docomo_mini_2026",
     "carrier_id": "docomo",
     "brand_id": "docomo_main",
-    "plan_name": "eximo mini",
+    "plan_name": "ドコモ mini",
     "plan_type": "MNO",
     "billing": {
-      "base_fee_yen": 2565,
+      "base_fee_yen": 2750,
       "tiers": [
-        { "up_to_gb": 1, "monthly_fee_yen": 2565, "label": "1GBまで" },
-        { "up_to_gb": 3, "monthly_fee_yen": 3465, "label": "3GBまで" }
+        {
+          "up_to_gb": 4,
+          "monthly_fee_yen": 2750,
+          "label": "4GB"
+        },
+        {
+          "up_to_gb": 10,
+          "monthly_fee_yen": 3850,
+          "label": "10GB"
+        }
       ],
-      "call_option_unlimited_yen": 1100,
-      "call_option_limited_yen": 550,
+      "call_option_unlimited_yen": 1980,
+      "call_option_limited_yen": 880,
       "initial_fee_yen": 0,
       "cancellation_fee_yen": 0
     },
     "discounts": [
       {
-        "name": "みんなドコモ割（3回線以上）",
-        "monthly_discount_yen": 1100,
-        "condition": "ドコモ回線を3回線以上ご契約",
-        "condition_structured": { "min_lines": 3 },
+        "name": "ドコモ光セット割／home 5G セット割",
+        "monthly_discount_yen": 1210,
+        "condition": "ドコモ光またはhome 5Gと同一ファミリー割引グループ",
+        "condition_structured": {
+          "requires_fixed_line": true
+        },
         "is_permanent": true
       },
       {
-        "name": "ドコモ光セット割",
-        "monthly_discount_yen": 1100,
-        "condition": "ドコモ光またはhome 5Gと同時契約",
-        "condition_structured": { "requires_fixed_line": true },
+        "name": "dカードお支払割",
+        "monthly_discount_yen": 550,
+        "condition": "dカード PLATINUM / GOLD / GOLD U などで支払い",
+        "condition_structured": {
+          "requires_card": "d_card"
+        },
+        "is_permanent": true
+      },
+      {
+        "name": "ドコモでんきセット割",
+        "monthly_discount_yen": 110,
+        "condition": "ドコモでんき契約",
+        "condition_structured": {
+          "requires_electricity": true
+        },
         "is_permanent": true
       }
     ],
@@ -108,8 +176,8 @@
       "condition": "dカード利用でdポイント還元"
     },
     "data": {
-      "monthly_gb": 3,
-      "throttle_speed_kbps": 128,
+      "monthly_gb": 10,
+      "throttle_speed_kbps": 1000,
       "tethering_gb": "same"
     },
     "constraints": {
@@ -117,19 +185,28 @@
       "store_support": "full",
       "esim_available": true,
       "sim_only_available": true,
-      "payment_methods": ["クレジットカード", "口座振替", "dカード"]
+      "payment_methods": [
+        "クレジットカード",
+        "口座振替",
+        "dカード"
+      ]
     },
-    "device": { "bundled_sales": true, "installment_available": true },
+    "device": {
+      "bundled_sales": true,
+      "installment_available": true
+    },
     "evidence": {
-      "source_url": "https://www.nttdocomo.co.jp/charge/eximo-mini/",
+      "source_url": "https://www.docomo.ne.jp/charge/docomo_mini/",
       "fetched_at": "2026-06-07T00:00:00+09:00",
-      "published_at": "2023-06-01",
-      "snapshot_path": "snapshots/docomo_eximo_mini_20260607.html.gz",
-      "notes_hash": "placeholder"
+      "published_at": "2025-06-05",
+      "snapshot_path": "",
+      "notes_hash": ""
     },
     "status": "published",
     "created_at": "2026-06-07T00:00:00+09:00",
-    "updated_at": "2026-06-07T00:00:00+09:00"
+    "updated_at": "2026-06-07T00:00:00+09:00",
+    "plan_status": "active",
+    "last_verified_at": "2026-07-02T00:00:00+09:00"
   },
   {
     "id": "ahamo_2026",
@@ -140,10 +217,18 @@
     "billing": {
       "base_fee_yen": 2970,
       "tiers": [
-        { "up_to_gb": 30, "monthly_fee_yen": 2970, "label": "30GB" },
-        { "up_to_gb": 110, "monthly_fee_yen": 4950, "label": "大盛り110GB" }
+        {
+          "up_to_gb": 30,
+          "monthly_fee_yen": 2970,
+          "label": "30GB"
+        },
+        {
+          "up_to_gb": 110,
+          "monthly_fee_yen": 4950,
+          "label": "大盛り110GB"
+        }
       ],
-      "call_option_unlimited_yen": null,
+      "call_option_unlimited_yen": 1100,
       "call_option_limited_yen": null,
       "initial_fee_yen": 0,
       "cancellation_fee_yen": 0
@@ -160,19 +245,27 @@
       "store_support": "limited",
       "esim_available": true,
       "sim_only_available": true,
-      "payment_methods": ["クレジットカード", "デビットカード"]
+      "payment_methods": [
+        "クレジットカード",
+        "デビットカード"
+      ]
     },
-    "device": { "bundled_sales": false, "installment_available": false },
+    "device": {
+      "bundled_sales": false,
+      "installment_available": false
+    },
     "evidence": {
-      "source_url": "https://ahamo.com/ahamo/plans/",
-      "fetched_at": "2026-06-07T00:00:00+09:00",
+      "source_url": "https://ahamo.com/plan/index.html",
+      "fetched_at": "2026-06-15T00:00:00+09:00",
       "published_at": "2024-06-01",
-      "snapshot_path": "snapshots/ahamo_20260607.html.gz",
-      "notes_hash": "placeholder"
+      "snapshot_path": "",
+      "notes_hash": ""
     },
     "status": "published",
     "created_at": "2026-06-07T00:00:00+09:00",
-    "updated_at": "2026-06-07T00:00:00+09:00"
+    "updated_at": "2026-06-15T00:00:00+09:00",
+    "plan_status": "active",
+    "last_verified_at": "2026-07-02T00:00:00+09:00"
   },
   {
     "id": "povo2_2026",
@@ -183,10 +276,21 @@
     "billing": {
       "base_fee_yen": 0,
       "tiers": [
-        { "up_to_gb": 3, "monthly_fee_yen": 990, "label": "3GB/30日" },
-        { "up_to_gb": 20, "monthly_fee_yen": 2700, "label": "20GB/30日" },
-        { "up_to_gb": 60, "monthly_fee_yen": 6490, "label": "60GB/90日" },
-        { "up_to_gb": "unlimited", "monthly_fee_yen": 2700, "label": "使い放題24時間" }
+        {
+          "up_to_gb": 3,
+          "monthly_fee_yen": 990,
+          "label": "3GB/30日"
+        },
+        {
+          "up_to_gb": 5,
+          "monthly_fee_yen": 1380,
+          "label": "5GB/30日"
+        },
+        {
+          "up_to_gb": 30,
+          "monthly_fee_yen": 2780,
+          "label": "30GB/30日"
+        }
       ],
       "call_option_unlimited_yen": 1650,
       "call_option_limited_yen": 550,
@@ -200,7 +304,7 @@
       "condition": "Pontaポイント（トッピング購入で付与）"
     },
     "data": {
-      "monthly_gb": 20,
+      "monthly_gb": 30,
       "throttle_speed_kbps": 128,
       "tethering_gb": "same"
     },
@@ -209,44 +313,111 @@
       "store_support": "none",
       "esim_available": true,
       "sim_only_available": true,
-      "payment_methods": ["クレジットカード", "デビットカード"]
+      "payment_methods": [
+        "クレジットカード",
+        "デビットカード"
+      ]
     },
-    "device": { "bundled_sales": false, "installment_available": false },
+    "device": {
+      "bundled_sales": false,
+      "installment_available": false
+    },
     "evidence": {
-      "source_url": "https://povo.jp/spec/",
-      "fetched_at": "2026-06-07T00:00:00+09:00",
+      "source_url": "https://povo.jp/topping/",
+      "fetched_at": "2026-06-15T00:00:00+09:00",
       "published_at": "2021-09-01",
-      "snapshot_path": "snapshots/povo2_20260607.html.gz",
-      "notes_hash": "placeholder"
+      "snapshot_path": "",
+      "notes_hash": ""
     },
     "status": "published",
     "created_at": "2026-06-07T00:00:00+09:00",
-    "updated_at": "2026-06-07T00:00:00+09:00"
+    "updated_at": "2026-06-15T00:00:00+09:00",
+    "plan_status": "active",
+    "last_verified_at": "2026-07-02T00:00:00+09:00"
   },
   {
-    "id": "linemo_smart_2026",
+    "id": "linemo_best_2026",
     "carrier_id": "softbank",
     "brand_id": "linemo",
-    "plan_name": "LINEMOスマートプラン",
+    "plan_name": "LINEMOベストプラン",
     "plan_type": "online_only",
     "billing": {
-      "base_fee_yen": 2728,
+      "base_fee_yen": 990,
       "tiers": [
-        { "up_to_gb": 20, "monthly_fee_yen": 2728, "label": "20GB" }
+        {
+          "up_to_gb": 3,
+          "monthly_fee_yen": 990,
+          "label": "3GBまで"
+        },
+        {
+          "up_to_gb": 10,
+          "monthly_fee_yen": 2090,
+          "label": "10GBまで"
+        }
       ],
-      "call_option_unlimited_yen": 1100,
+      "call_option_unlimited_yen": 1650,
       "call_option_limited_yen": 550,
       "initial_fee_yen": 0,
-      "cancellation_fee_yen": 0
+      "cancellation_fee_yen": 990
     },
     "discounts": [],
-    "point_economy": {
-      "point_type": "paypay",
-      "monthly_point_estimate": 150,
-      "condition": "PayPayポイント（PayPay支払い利用で付与）"
-    },
+    "point_economy": null,
     "data": {
-      "monthly_gb": 20,
+      "monthly_gb": 10,
+      "throttle_speed_kbps": 300,
+      "tethering_gb": "same"
+    },
+    "constraints": {
+      "online_only": true,
+      "store_support": "none",
+      "esim_available": true,
+      "sim_only_available": true,
+      "payment_methods": [
+        "クレジットカード",
+        "デビットカード"
+      ]
+    },
+    "device": {
+      "bundled_sales": false,
+      "installment_available": false
+    },
+    "evidence": {
+      "source_url": "https://www.linemo.jp/plan/",
+      "fetched_at": "2026-06-07T00:00:00+09:00",
+      "published_at": "2024-07-30",
+      "snapshot_path": "",
+      "notes_hash": ""
+    },
+    "status": "published",
+    "created_at": "2026-06-07T00:00:00+09:00",
+    "updated_at": "2026-06-07T00:00:00+09:00",
+    "plan_status": "active",
+    "last_verified_at": "2026-07-02T00:00:00+09:00"
+  },
+  {
+    "id": "linemo_best_v_2026",
+    "carrier_id": "softbank",
+    "brand_id": "linemo",
+    "plan_name": "LINEMOベストプランV",
+    "plan_type": "online_only",
+    "billing": {
+      "base_fee_yen": 2970,
+      "tiers": [
+        {
+          "up_to_gb": 30,
+          "monthly_fee_yen": 2970,
+          "label": "30GB"
+        }
+      ],
+      "call_option_unlimited_yen": 1100,
+      "call_option_limited_yen": null,
+      "initial_fee_yen": 0,
+      "cancellation_fee_yen": 1100
+    },
+    "discounts": [],
+    "point_economy": null,
+    "data": {
+      "monthly_gb": 30,
       "throttle_speed_kbps": 1000,
       "tethering_gb": "same"
     },
@@ -255,61 +426,53 @@
       "store_support": "none",
       "esim_available": true,
       "sim_only_available": true,
-      "payment_methods": ["クレジットカード", "デビットカード"]
+      "payment_methods": [
+        "クレジットカード",
+        "デビットカード"
+      ]
     },
-    "device": { "bundled_sales": false, "installment_available": false },
+    "device": {
+      "bundled_sales": false,
+      "installment_available": false
+    },
     "evidence": {
       "source_url": "https://www.linemo.jp/plan/",
       "fetched_at": "2026-06-07T00:00:00+09:00",
-      "published_at": "2024-03-01",
-      "snapshot_path": "snapshots/linemo_smart_20260607.html.gz",
-      "notes_hash": "placeholder"
+      "published_at": "2024-07-30",
+      "snapshot_path": "",
+      "notes_hash": ""
     },
     "status": "published",
     "created_at": "2026-06-07T00:00:00+09:00",
-    "updated_at": "2026-06-07T00:00:00+09:00"
+    "updated_at": "2026-06-07T00:00:00+09:00",
+    "plan_status": "active",
+    "last_verified_at": "2026-07-02T00:00:00+09:00"
   },
   {
-    "id": "uqmobile_comikomi_m_2026",
+    "id": "uqmobile_komikomi_value_2026",
     "carrier_id": "au",
     "brand_id": "uq_mobile",
-    "plan_name": "コミコミプランM",
+    "plan_name": "コミコミプランバリュー",
     "plan_type": "sub_brand",
     "billing": {
-      "base_fee_yen": 3278,
+      "base_fee_yen": 3828,
       "tiers": [
-        { "up_to_gb": 15, "monthly_fee_yen": 3278, "label": "15GB" },
-        { "up_to_gb": "unlimited", "monthly_fee_yen": 3278, "label": "15GB（節約モード切替可）" }
+        {
+          "up_to_gb": 35,
+          "monthly_fee_yen": 3828,
+          "label": "35GB"
+        }
       ],
-      "call_option_unlimited_yen": null,
+      "call_option_unlimited_yen": 1100,
       "call_option_limited_yen": null,
       "initial_fee_yen": 0,
       "cancellation_fee_yen": 0
     },
-    "discounts": [
-      {
-        "name": "自宅セット割",
-        "monthly_discount_yen": 1100,
-        "condition": "au/UQ WiMAX等の自宅ネットと同時契約",
-        "condition_structured": { "requires_fixed_line": true },
-        "is_permanent": true
-      },
-      {
-        "name": "家族セット割",
-        "monthly_discount_yen": 550,
-        "condition": "家族でUQまたはauを2回線以上利用",
-        "condition_structured": { "min_lines": 2 },
-        "is_permanent": true
-      }
-    ],
-    "point_economy": {
-      "point_type": "au_point",
-      "monthly_point_estimate": 100,
-      "condition": "Pontaポイント（au PAY利用で付与）"
-    },
+    "discounts": [],
+    "point_economy": null,
     "data": {
-      "monthly_gb": 15,
-      "throttle_speed_kbps": 300,
+      "monthly_gb": 35,
+      "throttle_speed_kbps": 1000,
       "tethering_gb": "same"
     },
     "constraints": {
@@ -317,49 +480,76 @@
       "store_support": "full",
       "esim_available": true,
       "sim_only_available": true,
-      "payment_methods": ["クレジットカード", "口座振替"]
+      "payment_methods": [
+        "クレジットカード",
+        "口座振替"
+      ]
     },
-    "device": { "bundled_sales": true, "installment_available": true },
+    "device": {
+      "bundled_sales": true,
+      "installment_available": true
+    },
     "evidence": {
-      "source_url": "https://www.uqwimax.jp/mobile/plans/comikomi/",
+      "source_url": "https://www.uqwimax.jp/mobile/plan/komikomi-pv/",
       "fetched_at": "2026-06-07T00:00:00+09:00",
-      "published_at": "2024-04-01",
-      "snapshot_path": "snapshots/uq_comikomi_m_20260607.html.gz",
-      "notes_hash": "placeholder"
+      "published_at": "2025-06-03",
+      "snapshot_path": "",
+      "notes_hash": ""
     },
     "status": "published",
     "created_at": "2026-06-07T00:00:00+09:00",
-    "updated_at": "2026-06-07T00:00:00+09:00"
+    "updated_at": "2026-06-07T00:00:00+09:00",
+    "plan_status": "active",
+    "last_verified_at": "2026-07-02T00:00:00+09:00"
   },
   {
-    "id": "ymobile_simple2_m_2026",
+    "id": "ymobile_simple3_m_2026",
     "carrier_id": "softbank",
     "brand_id": "ymobile",
-    "plan_name": "シンプル2 M",
+    "plan_name": "シンプル3 M",
     "plan_type": "sub_brand",
     "billing": {
-      "base_fee_yen": 4015,
+      "base_fee_yen": 4378,
       "tiers": [
-        { "up_to_gb": 20, "monthly_fee_yen": 4015, "label": "20GB" }
+        {
+          "up_to_gb": 30,
+          "monthly_fee_yen": 4378,
+          "label": "30GB"
+        }
       ],
-      "call_option_unlimited_yen": 880,
-      "call_option_limited_yen": null,
+      "call_option_unlimited_yen": 1980,
+      "call_option_limited_yen": 880,
       "initial_fee_yen": 0,
-      "cancellation_fee_yen": 0
+      "cancellation_fee_yen": 858
     },
     "discounts": [
       {
         "name": "家族割引サービス",
         "monthly_discount_yen": 1100,
-        "condition": "家族でY!mobileを2回線以上利用",
-        "condition_structured": { "min_lines": 2 },
+        "condition": "家族などでY!mobileを2回線以上利用。2回線目以降が対象。おうち割 光セット（A）とは重複不可",
+        "exclusive_group": "ymobile_family_or_fixed_line",
+        "condition_structured": {
+          "min_lines": 2
+        },
         "is_permanent": true
       },
       {
-        "name": "おうち割 光セット",
-        "monthly_discount_yen": 1100,
-        "condition": "SoftBank光またはAirと同時契約",
-        "condition_structured": { "requires_fixed_line": true },
+        "name": "おうち割 光セット（A）",
+        "monthly_discount_yen": 1650,
+        "condition": "SoftBank 光またはSoftBank Airと同時契約",
+        "condition_structured": {
+          "requires_fixed_line": true
+        },
+        "is_permanent": true,
+        "exclusive_group": "ymobile_family_or_fixed_line"
+      },
+      {
+        "name": "PayPayカード割",
+        "monthly_discount_yen": 330,
+        "condition": "PayPayカードで支払い",
+        "condition_structured": {
+          "requires_card": "paypay_card"
+        },
         "is_permanent": true
       }
     ],
@@ -369,8 +559,8 @@
       "condition": "PayPayポイント（PayPay支払い利用で付与）"
     },
     "data": {
-      "monthly_gb": 20,
-      "throttle_speed_kbps": 300,
+      "monthly_gb": 30,
+      "throttle_speed_kbps": 1000,
       "tethering_gb": "same"
     },
     "constraints": {
@@ -378,19 +568,27 @@
       "store_support": "full",
       "esim_available": true,
       "sim_only_available": true,
-      "payment_methods": ["クレジットカード", "口座振替"]
+      "payment_methods": [
+        "クレジットカード",
+        "口座振替"
+      ]
     },
-    "device": { "bundled_sales": true, "installment_available": true },
+    "device": {
+      "bundled_sales": true,
+      "installment_available": true
+    },
     "evidence": {
-      "source_url": "https://www.ymobile.jp/plan/simple2m/",
+      "source_url": "https://www.ymobile.jp/plan/",
       "fetched_at": "2026-06-07T00:00:00+09:00",
-      "published_at": "2023-10-01",
-      "snapshot_path": "snapshots/ymobile_simple2m_20260607.html.gz",
-      "notes_hash": "placeholder"
+      "published_at": "2025-09-25",
+      "snapshot_path": "",
+      "notes_hash": ""
     },
     "status": "published",
     "created_at": "2026-06-07T00:00:00+09:00",
-    "updated_at": "2026-06-07T00:00:00+09:00"
+    "updated_at": "2026-06-07T00:00:00+09:00",
+    "plan_status": "active",
+    "last_verified_at": "2026-07-02T00:00:00+09:00"
   },
   {
     "id": "rakuten_unlimited_2026",
@@ -401,9 +599,21 @@
     "billing": {
       "base_fee_yen": 1078,
       "tiers": [
-        { "up_to_gb": 3, "monthly_fee_yen": 1078, "label": "3GBまで" },
-        { "up_to_gb": 20, "monthly_fee_yen": 2178, "label": "20GBまで" },
-        { "up_to_gb": "unlimited", "monthly_fee_yen": 3278, "label": "無制限" }
+        {
+          "up_to_gb": 3,
+          "monthly_fee_yen": 1078,
+          "label": "3GBまで"
+        },
+        {
+          "up_to_gb": 20,
+          "monthly_fee_yen": 2178,
+          "label": "20GBまで"
+        },
+        {
+          "up_to_gb": "unlimited",
+          "monthly_fee_yen": 3278,
+          "label": "無制限"
+        }
       ],
       "call_option_unlimited_yen": null,
       "call_option_limited_yen": null,
@@ -415,14 +625,18 @@
         "name": "最強家族プログラム",
         "monthly_discount_yen": 110,
         "condition": "家族で楽天モバイルを2回線以上利用（1回線あたり110円割引）",
-        "condition_structured": { "min_lines": 2 },
+        "condition_structured": {
+          "min_lines": 2
+        },
         "is_permanent": true
       },
       {
         "name": "最強青春プログラム",
         "monthly_discount_yen": 1100,
         "condition": "22歳以下の方（毎月最大110ポイント還元）",
-        "condition_structured": { "age_max": 22 },
+        "condition_structured": {
+          "age_max": 22
+        },
         "is_permanent": false,
         "expires_at": "2027-03-31"
       }
@@ -442,19 +656,28 @@
       "store_support": "full",
       "esim_available": true,
       "sim_only_available": true,
-      "payment_methods": ["クレジットカード", "楽天ペイ", "口座振替"]
+      "payment_methods": [
+        "クレジットカード",
+        "楽天ペイ",
+        "口座振替"
+      ]
     },
-    "device": { "bundled_sales": true, "installment_available": true },
+    "device": {
+      "bundled_sales": true,
+      "installment_available": true
+    },
     "evidence": {
-      "source_url": "https://network.mobile.rakuten.co.jp/fee/un-limit/",
+      "source_url": "https://network.mobile.rakuten.co.jp/fee/saikyo-plan/",
       "fetched_at": "2026-06-07T00:00:00+09:00",
       "published_at": "2023-06-01",
-      "snapshot_path": "snapshots/rakuten_unlimited_20260607.html.gz",
-      "notes_hash": "placeholder"
+      "snapshot_path": "",
+      "notes_hash": ""
     },
     "status": "published",
     "created_at": "2026-06-07T00:00:00+09:00",
-    "updated_at": "2026-06-07T00:00:00+09:00"
+    "updated_at": "2026-06-07T00:00:00+09:00",
+    "plan_status": "active",
+    "last_verified_at": "2026-07-02T00:00:00+09:00"
   },
   {
     "id": "iijmio_10gb_2026",
@@ -465,11 +688,31 @@
     "billing": {
       "base_fee_yen": 1500,
       "tiers": [
-        { "up_to_gb": 2, "monthly_fee_yen": 850, "label": "2GB" },
-        { "up_to_gb": 5, "monthly_fee_yen": 990, "label": "5GB" },
-        { "up_to_gb": 10, "monthly_fee_yen": 1500, "label": "10GB" },
-        { "up_to_gb": 15, "monthly_fee_yen": 1800, "label": "15GB" },
-        { "up_to_gb": 20, "monthly_fee_yen": 2000, "label": "20GB" }
+        {
+          "up_to_gb": 2,
+          "monthly_fee_yen": 850,
+          "label": "2GB"
+        },
+        {
+          "up_to_gb": 5,
+          "monthly_fee_yen": 990,
+          "label": "5GB"
+        },
+        {
+          "up_to_gb": 10,
+          "monthly_fee_yen": 1500,
+          "label": "10GB"
+        },
+        {
+          "up_to_gb": 15,
+          "monthly_fee_yen": 1800,
+          "label": "15GB"
+        },
+        {
+          "up_to_gb": 20,
+          "monthly_fee_yen": 2000,
+          "label": "20GB"
+        }
       ],
       "call_option_unlimited_yen": 1400,
       "call_option_limited_yen": 220,
@@ -481,7 +724,9 @@
         "name": "複数回線割引",
         "monthly_discount_yen": 55,
         "condition": "IIJmioを2回線以上利用",
-        "condition_structured": { "min_lines": 2 },
+        "condition_structured": {
+          "min_lines": 2
+        },
         "is_permanent": true
       }
     ],
@@ -496,19 +741,26 @@
       "store_support": "none",
       "esim_available": true,
       "sim_only_available": true,
-      "payment_methods": ["クレジットカード"]
+      "payment_methods": [
+        "クレジットカード"
+      ]
     },
-    "device": { "bundled_sales": true, "installment_available": false },
+    "device": {
+      "bundled_sales": true,
+      "installment_available": false
+    },
     "evidence": {
       "source_url": "https://www.iijmio.jp/gigaplan/",
       "fetched_at": "2026-06-07T00:00:00+09:00",
       "published_at": "2024-04-01",
-      "snapshot_path": "snapshots/iijmio_10gb_20260607.html.gz",
-      "notes_hash": "placeholder"
+      "snapshot_path": "",
+      "notes_hash": ""
     },
     "status": "published",
     "created_at": "2026-06-07T00:00:00+09:00",
-    "updated_at": "2026-06-07T00:00:00+09:00"
+    "updated_at": "2026-06-07T00:00:00+09:00",
+    "plan_status": "active",
+    "last_verified_at": "2026-07-02T00:00:00+09:00"
   },
   {
     "id": "mineo_10gb_2026",
@@ -519,10 +771,26 @@
     "billing": {
       "base_fee_yen": 1958,
       "tiers": [
-        { "up_to_gb": 1, "monthly_fee_yen": 1298, "label": "1GB" },
-        { "up_to_gb": 5, "monthly_fee_yen": 1518, "label": "5GB" },
-        { "up_to_gb": 10, "monthly_fee_yen": 1958, "label": "10GB" },
-        { "up_to_gb": 20, "monthly_fee_yen": 2178, "label": "20GB" }
+        {
+          "up_to_gb": 1,
+          "monthly_fee_yen": 1298,
+          "label": "1GB"
+        },
+        {
+          "up_to_gb": 5,
+          "monthly_fee_yen": 1518,
+          "label": "5GB"
+        },
+        {
+          "up_to_gb": 10,
+          "monthly_fee_yen": 1958,
+          "label": "10GB"
+        },
+        {
+          "up_to_gb": 20,
+          "monthly_fee_yen": 2178,
+          "label": "20GB"
+        }
       ],
       "call_option_unlimited_yen": 1210,
       "call_option_limited_yen": 550,
@@ -534,7 +802,9 @@
         "name": "家族割",
         "monthly_discount_yen": 55,
         "condition": "同一名義でmineo2回線以上利用",
-        "condition_structured": { "min_lines": 2 },
+        "condition_structured": {
+          "min_lines": 2
+        },
         "is_permanent": true
       }
     ],
@@ -549,36 +819,55 @@
       "store_support": "limited",
       "esim_available": true,
       "sim_only_available": true,
-      "payment_methods": ["クレジットカード"]
+      "payment_methods": [
+        "クレジットカード"
+      ]
     },
-    "device": { "bundled_sales": true, "installment_available": false },
+    "device": {
+      "bundled_sales": true,
+      "installment_available": false
+    },
     "evidence": {
-      "source_url": "https://mineo.jp/plan/",
+      "source_url": "https://mineo.jp/price/",
       "fetched_at": "2026-06-07T00:00:00+09:00",
       "published_at": "2023-04-01",
-      "snapshot_path": "snapshots/mineo_10gb_20260607.html.gz",
-      "notes_hash": "placeholder"
+      "snapshot_path": "",
+      "notes_hash": ""
     },
     "status": "published",
     "created_at": "2026-06-07T00:00:00+09:00",
-    "updated_at": "2026-06-07T00:00:00+09:00"
+    "updated_at": "2026-06-07T00:00:00+09:00",
+    "plan_status": "active",
+    "last_verified_at": "2026-07-02T00:00:00+09:00"
   },
   {
     "id": "nuro_10gb_2026",
     "carrier_id": "nuro",
     "brand_id": "nuro_mobile",
-    "plan_name": "NUROモバイル NEOプラン 10GB",
+    "plan_name": "NUROモバイル バリュープラス VLプラン",
     "plan_type": "MVNO",
     "billing": {
-      "base_fee_yen": 1320,
+      "base_fee_yen": 1485,
       "tiers": [
-        { "up_to_gb": 3, "monthly_fee_yen": 792, "label": "3GB" },
-        { "up_to_gb": 10, "monthly_fee_yen": 1320, "label": "10GB" },
-        { "up_to_gb": 20, "monthly_fee_yen": 2189, "label": "20GB" }
+        {
+          "up_to_gb": 3,
+          "monthly_fee_yen": 792,
+          "label": "3GB"
+        },
+        {
+          "up_to_gb": 10,
+          "monthly_fee_yen": 1485,
+          "label": "10GB"
+        },
+        {
+          "up_to_gb": 15,
+          "monthly_fee_yen": 1790,
+          "label": "15GB"
+        }
       ],
-      "call_option_unlimited_yen": 1100,
-      "call_option_limited_yen": 550,
-      "initial_fee_yen": 220,
+      "call_option_unlimited_yen": 1430,
+      "call_option_limited_yen": 490,
+      "initial_fee_yen": 3740,
       "cancellation_fee_yen": 0
     },
     "discounts": [],
@@ -593,49 +882,75 @@
       "store_support": "none",
       "esim_available": true,
       "sim_only_available": true,
-      "payment_methods": ["クレジットカード"]
+      "payment_methods": [
+        "クレジットカード"
+      ]
     },
-    "device": { "bundled_sales": false, "installment_available": false },
+    "device": {
+      "bundled_sales": false,
+      "installment_available": false
+    },
     "evidence": {
-      "source_url": "https://mobile.nuro.jp/neoplan/",
-      "fetched_at": "2026-06-07T00:00:00+09:00",
-      "published_at": "2023-07-01",
-      "snapshot_path": "snapshots/nuro_10gb_20260607.html.gz",
-      "notes_hash": "placeholder"
+      "source_url": "https://mobile.nuro.jp/plan/valueplus/",
+      "fetched_at": "2026-07-02T00:00:00+09:00",
+      "published_at": "2021-04-01",
+      "snapshot_path": "",
+      "notes_hash": ""
     },
     "status": "published",
     "created_at": "2026-06-07T00:00:00+09:00",
-    "updated_at": "2026-06-07T00:00:00+09:00"
+    "updated_at": "2026-07-02T00:00:00+09:00",
+    "plan_status": "active",
+    "last_verified_at": "2026-07-02T00:00:00+09:00"
   },
   {
-    "id": "ymobile_simple2_s_2026",
+    "id": "ymobile_simple3_s_2026",
     "carrier_id": "softbank",
     "brand_id": "ymobile",
-    "plan_name": "シンプル2 S",
+    "plan_name": "シンプル3 S",
     "plan_type": "sub_brand",
     "billing": {
-      "base_fee_yen": 2365,
+      "base_fee_yen": 3278,
       "tiers": [
-        { "up_to_gb": 4, "monthly_fee_yen": 2365, "label": "4GB" }
+        {
+          "up_to_gb": 5,
+          "monthly_fee_yen": 3278,
+          "label": "5GB"
+        }
       ],
-      "call_option_unlimited_yen": 880,
-      "call_option_limited_yen": null,
+      "call_option_unlimited_yen": 1980,
+      "call_option_limited_yen": 880,
       "initial_fee_yen": 0,
-      "cancellation_fee_yen": 0
+      "cancellation_fee_yen": 858
     },
     "discounts": [
       {
         "name": "家族割引サービス",
         "monthly_discount_yen": 1100,
-        "condition": "家族でY!mobileを2回線以上利用",
-        "condition_structured": { "min_lines": 2 },
+        "condition": "家族などでY!mobileを2回線以上利用。2回線目以降が対象。おうち割 光セット（A）とは重複不可",
+        "exclusive_group": "ymobile_family_or_fixed_line",
+        "condition_structured": {
+          "min_lines": 2
+        },
         "is_permanent": true
       },
       {
-        "name": "おうち割 光セット",
-        "monthly_discount_yen": 1100,
-        "condition": "SoftBank光またはAirと同時契約",
-        "condition_structured": { "requires_fixed_line": true },
+        "name": "おうち割 光セット（A）",
+        "monthly_discount_yen": 1650,
+        "condition": "SoftBank 光またはSoftBank Airと同時契約",
+        "condition_structured": {
+          "requires_fixed_line": true
+        },
+        "is_permanent": true,
+        "exclusive_group": "ymobile_family_or_fixed_line"
+      },
+      {
+        "name": "PayPayカード割",
+        "monthly_discount_yen": 330,
+        "condition": "PayPayカードで支払い",
+        "condition_structured": {
+          "requires_card": "paypay_card"
+        },
         "is_permanent": true
       }
     ],
@@ -645,8 +960,8 @@
       "condition": "PayPayポイント（PayPay支払い利用で付与）"
     },
     "data": {
-      "monthly_gb": 4,
-      "throttle_speed_kbps": 300,
+      "monthly_gb": 5,
+      "throttle_speed_kbps": 1000,
       "tethering_gb": "same"
     },
     "constraints": {
@@ -654,18 +969,26 @@
       "store_support": "full",
       "esim_available": true,
       "sim_only_available": true,
-      "payment_methods": ["クレジットカード", "口座振替"]
+      "payment_methods": [
+        "クレジットカード",
+        "口座振替"
+      ]
     },
-    "device": { "bundled_sales": true, "installment_available": true },
+    "device": {
+      "bundled_sales": true,
+      "installment_available": true
+    },
     "evidence": {
-      "source_url": "https://www.ymobile.jp/plan/simple2s/",
+      "source_url": "https://www.ymobile.jp/plan/",
       "fetched_at": "2026-06-07T00:00:00+09:00",
-      "published_at": "2023-10-01",
-      "snapshot_path": "snapshots/ymobile_simple2s_20260607.html.gz",
-      "notes_hash": "placeholder"
+      "published_at": "2025-09-25",
+      "snapshot_path": "",
+      "notes_hash": ""
     },
     "status": "published",
     "created_at": "2026-06-07T00:00:00+09:00",
-    "updated_at": "2026-06-07T00:00:00+09:00"
+    "updated_at": "2026-06-07T00:00:00+09:00",
+    "plan_status": "active",
+    "last_verified_at": "2026-07-02T00:00:00+09:00"
   }
 ]

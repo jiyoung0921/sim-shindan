@@ -7,7 +7,10 @@
 
 ## ステータス
 
-**実装完了・未デプロイ**（2026-06-08時点）
+**本番デプロイ済み・初期MVP検証中**（2026-06-11時点）
+
+- 本番URL: https://sumahoshindan.com
+- 現在の主目的: 診断完了率、結果納得度、公式リンククリック意図の検証
 
 ---
 
@@ -40,6 +43,7 @@ npm run dev
 |---------|------|
 | [`CONTEXT.md`](./CONTEXT.md) | **AI向け引き継ぎ資料**（アーキテクチャ・実装状況・コアロジック） |
 | [`docs/requirements.md`](./docs/requirements.md) | 要件定義書（詳細仕様・全959行） |
+| [`docs/claude-business-review.md`](./docs/claude-business-review.md) | Claudeレビュー用の事業・ロジック・マネタイズ・ロードマップ整理 |
 | [`docs/launch.md`](./docs/launch.md) | ローンチ手順書（30〜35分でデプロイ完了） |
 | [`.env.local.example`](./.env.local.example) | 環境変数テンプレート |
 

@@ -1,28 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { AntennaSignal, OpenNewWindow, Refresh } from "iconoir-react";
 import type { NewServiceSignalRow } from "@/lib/db";
 
-const SIGNAL_TYPE_CFG: Record<string, { label: string; color: string; icon: string }> = {
-  new_carrier:    { label: "新規参入",    color: "bg-emerald-700 text-emerald-100", icon: "🆕" },
-  price_cut:      { label: "値下げ",      color: "bg-blue-700 text-blue-100",       icon: "💰" },
-  new_plan:       { label: "新プラン",    color: "bg-violet-700 text-violet-100",   icon: "📱" },
-  mvno_launch:    { label: "MVNO参入",    color: "bg-teal-700 text-teal-100",       icon: "🌐" },
-  whois_new:      { label: "ドメイン取得", color: "bg-amber-700 text-amber-100",    icon: "🔍" },
-  pr_times:       { label: "プレスリリース", color: "bg-pink-700 text-pink-100",    icon: "📰" },
-  rss_keyword:    { label: "RSSマッチ",   color: "bg-orange-700 text-orange-100",   icon: "📡" },
+const SIGNAL_TYPE_LABEL: Record<string, string> = {
+  new_carrier: "新規参入",
+  price_cut: "値下げ",
+  new_plan: "新プラン",
+  mvno_launch: "MVNO参入",
+  whois_new: "ドメイン取得",
+  pr_times: "プレスリリース",
+  rss_keyword: "RSSマッチ",
 };
+
+function isProcessed(signal: NewServiceSignalRow): boolean {
+  return signal.status !== undefined && signal.status !== "unreviewed";
+}
 
 function ConfidenceBar({ value }: { value: number }) {
   const pct = Math.round(value * 100);
-  const color = pct >= 70 ? "bg-emerald-500" : pct >= 40 ? "bg-amber-500" : "bg-slate-500";
   return (
-    <div className="flex items-center gap-2">
-      <div className="h-1.5 w-24 bg-slate-700 rounded-full overflow-hidden">
-        <div className={`h-full ${color} rounded-full`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="text-xs text-slate-400">{pct}%</span>
-    </div>
+    <span className="inline-flex items-center gap-2">
+      <span className="h-1.5 w-20 overflow-hidden rounded-full bg-zinc-100">
+        <span className="block h-full rounded-full bg-zinc-950" style={{ width: `${pct}%` }} />
+      </span>
+      <span className="text-xs tabular-nums text-zinc-500">{pct}%</span>
+    </span>
   );
 }
 
@@ -32,21 +36,10 @@ export default function SignalsPage() {
   const [dismissing, setDismissing] = useState<string | null>(null);
   const [showDismissed, setShowDismissed] = useState(false);
 
-  const adminToken = typeof window !== "undefined"
-    ? (localStorage.getItem("admin_token") ?? "")
-    : "";
-
-  useEffect(() => {
-    load();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/signals", {
-        headers: { "x-admin-token": adminToken },
-      });
+      const res = await fetch("/api/admin/signals");
       if (res.ok) {
         const data = await res.json();
         setSignals(data.signals ?? []);
@@ -54,162 +47,151 @@ export default function SignalsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void load();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [load]);
 
   async function dismiss(id: string) {
     setDismissing(id);
     try {
       await fetch("/api/admin/signals", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-token": adminToken,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, action: "dismiss" }),
       });
-      setSignals((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, dismissed: true } : s))
-      );
+      setSignals((prev) => prev.map((s) => (s.id === id ? { ...s, status: "noise" } : s)));
     } finally {
       setDismissing(null);
     }
   }
 
-  const visible = showDismissed ? signals : signals.filter((s) => !s.dismissed);
-  const dismissedCount = signals.filter((s) => s.dismissed).length;
+  const visible = showDismissed ? signals : signals.filter((s) => !isProcessed(s));
+  const dismissedCount = signals.filter(isProcessed).length;
 
   if (loading) {
-    return <div className="text-slate-400 p-8">読み込み中…</div>;
+    return <p className="py-16 text-center text-sm text-zinc-500">読み込んでいます</p>;
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* ヘッダー */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">新サービス検知</h1>
-        <div className="flex gap-3 items-center">
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">検知シグナル</h1>
+        <div className="flex items-center gap-3">
           {dismissedCount > 0 && (
             <button
-              onClick={() => setShowDismissed((v) => !v)}
-              className="text-xs text-slate-400 hover:text-slate-200 transition-colors"
+              type="button"
+              onClick={() => setShowDismissed((value) => !value)}
+              className="text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-950"
             >
               {showDismissed ? "処理済みを隠す" : `処理済み ${dismissedCount}件を表示`}
             </button>
           )}
           <button
+            type="button"
             onClick={load}
-            className="px-3 py-1.5 text-sm bg-slate-700 rounded-lg hover:bg-slate-600 text-slate-300"
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
           >
+            <Refresh className="h-4 w-4" aria-hidden="true" />
             更新
           </button>
         </div>
       </div>
 
-      {/* 説明 */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 text-sm text-slate-400">
-        <p>
-          <span className="text-white font-medium">PR TIMES RSS</span> と
-          <span className="text-white font-medium ml-1">JPRS WHOIS</span> を監視して、
-          新規キャリア参入・新プラン発表のシグナルを検知します。
-          スクレイパーが自動挿入 → ここで確認 → 必要なら手動でプランデータに追加してください。
-        </p>
-      </div>
+      <p className="rounded-lg border border-zinc-200 bg-white p-4 text-sm leading-6 text-zinc-600 shadow-sm">
+        PR TIMES RSS と公開情報を監視し、新規キャリア参入・新プラン発表のシグナルを検知します。
+        ここで内容を確認し、必要であれば手動でプランデータに追加してください。
+      </p>
 
-      {/* シグナルなし */}
       {visible.length === 0 && (
-        <div className="text-center py-16 text-slate-400">
-          <p className="text-4xl mb-4">🔍</p>
-          <p>検知シグナルがありません</p>
-          <p className="text-sm mt-1">スクレイパー実行後に表示されます</p>
+        <div className="rounded-lg border border-zinc-200 bg-white px-6 py-16 text-center shadow-sm">
+          <AntennaSignal className="mx-auto h-6 w-6 text-zinc-400" aria-hidden="true" />
+          <p className="mt-4 text-sm font-medium text-zinc-700">検知シグナルはありません</p>
+          <p className="mt-1 text-xs leading-6 text-zinc-500">スクレイパー実行後に表示されます。</p>
         </div>
       )}
 
-      {/* シグナル一覧 */}
       <div className="space-y-3">
-        {visible.map((signal) => {
-          const cfg = SIGNAL_TYPE_CFG[signal.signal_type ?? "rss_keyword"] ?? {
-            label: signal.signal_type ?? "不明",
-            color: "bg-slate-600 text-slate-200",
-            icon: "📌",
-          };
-
-          return (
-            <div
-              key={signal.id}
-              className={`bg-slate-800 rounded-xl border p-4 transition-opacity ${
-                signal.dismissed
-                  ? "border-slate-700/50 opacity-50"
-                  : "border-slate-700"
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <span className="text-2xl shrink-0">{cfg.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-2">
-                    <span className={`text-xs px-2 py-0.5 rounded font-medium ${cfg.color}`}>
-                      {cfg.label}
+        {visible.map((signal) => (
+          <article
+            key={signal.id}
+            className={`rounded-lg border bg-white p-5 shadow-sm transition-opacity ${
+              isProcessed(signal) ? "border-zinc-100 opacity-50" : "border-zinc-200"
+            }`}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-md bg-stone-100 px-2 py-0.5 text-xs font-medium text-zinc-700">
+                    {SIGNAL_TYPE_LABEL[signal.signal_type ?? ""] ?? signal.signal_type ?? "不明"}
+                  </span>
+                  <span className="text-xs text-zinc-400">{signal.source}</span>
+                  {signal.negative_match && (
+                    <span className="rounded-md bg-stone-100 px-2 py-0.5 text-xs text-zinc-500">
+                      除外キーワードあり
                     </span>
-                    <span className="text-xs text-slate-500">{signal.source}</span>
-                    {signal.negative_match && (
-                      <span className="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-400">
-                        除外キーワードあり
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="text-white font-semibold text-sm leading-snug">{signal.title}</p>
-
-                  {signal.url && (
-                    <a
-                      href={signal.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-blue-400 hover:underline mt-1 inline-block"
-                    >
-                      記事を確認 ↗
-                    </a>
                   )}
-
-                  {signal.matched_keywords && signal.matched_keywords.length > 0 && (
-                    <div className="mt-2 flex gap-1.5 flex-wrap">
-                      {signal.matched_keywords.map((kw) => (
-                        <span key={kw} className="text-xs px-1.5 py-0.5 bg-slate-700 text-slate-300 rounded">
-                          {kw}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {signal.raw_content && (
-                    <p className="text-xs text-slate-400 mt-2 line-clamp-2">{signal.raw_content}</p>
-                  )}
-
-                  <div className="mt-2 flex items-center gap-4">
-                    {signal.confidence != null && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-500">信頼度</span>
-                        <ConfidenceBar value={signal.confidence} />
-                      </div>
-                    )}
-                    <span className="text-xs text-slate-500 ml-auto">
-                      {new Date(signal.created_at).toLocaleString("ja-JP")}
-                    </span>
-                  </div>
                 </div>
 
-                {!signal.dismissed && (
-                  <button
-                    onClick={() => dismiss(signal.id)}
-                    disabled={dismissing === signal.id}
-                    className="shrink-0 px-3 py-1.5 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg disabled:opacity-50 transition-colors"
+                <h2 className="mt-2 text-sm font-semibold leading-6 text-zinc-950">{signal.title}</h2>
+
+                {signal.url && (
+                  <a
+                    href={signal.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-zinc-600 underline-offset-4 transition-colors hover:text-zinc-950 hover:underline"
                   >
-                    {dismissing === signal.id ? "…" : "処理済み"}
-                  </button>
+                    記事を確認
+                    <OpenNewWindow className="h-3 w-3" aria-hidden="true" />
+                  </a>
                 )}
+
+                {signal.matched_keywords && signal.matched_keywords.length > 0 && (
+                  <p className="mt-2 text-xs text-zinc-500">
+                    キーワード: {signal.matched_keywords.join(" / ")}
+                  </p>
+                )}
+
+                {signal.raw_content && (
+                  <p className="mt-2 line-clamp-2 text-xs leading-5 text-zinc-500">
+                    {signal.raw_content}
+                  </p>
+                )}
+
+                <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+                  {signal.confidence != null && (
+                    <span className="inline-flex items-center gap-2 text-xs text-zinc-500">
+                      信頼度
+                      <ConfidenceBar value={signal.confidence} />
+                    </span>
+                  )}
+                  <span className="text-xs text-zinc-400">
+                    {new Date(signal.created_at).toLocaleString("ja-JP")}
+                  </span>
+                </div>
               </div>
+
+              {!isProcessed(signal) && (
+                <button
+                  type="button"
+                  onClick={() => dismiss(signal.id)}
+                  disabled={dismissing === signal.id}
+                  className="inline-flex h-8 shrink-0 items-center rounded-lg border border-zinc-200 bg-white px-3 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 disabled:opacity-50"
+                >
+                  処理済みにする
+                </button>
+              )}
             </div>
-          );
-        })}
+          </article>
+        ))}
       </div>
     </div>
   );

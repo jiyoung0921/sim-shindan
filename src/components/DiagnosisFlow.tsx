@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
   Check,
-  CircleHelp,
-  Gauge,
-  ReceiptText,
-  RotateCcw,
-} from "lucide-react";
-import { DiagnosisAnswers, PointEcosystemType } from "@/lib/types";
+  InfoCircle,
+  Page,
+  Refresh,
+  StatsUpSquare,
+} from "iconoir-react";
+import { DiagnosisAnswers, FixedLineCarrier, PointEcosystemType } from "@/lib/types";
+import CarrierIcon from "@/components/CarrierIcon";
+import { DIAGNOSIS_CARRIER_OPTIONS } from "@/lib/carriers";
+import { getOrCreateAnalyticsSessionId, trackClientEvent } from "@/lib/client-analytics";
 
 type StepId =
   | "carrier"
@@ -20,6 +23,7 @@ type StepId =
   | "call"
   | "family"
   | "familySwitch"
+  | "fixedLine"
   | "installment"
   | "support"
   | "quality"
@@ -33,6 +37,7 @@ const INITIAL_ANSWERS: DiagnosisAnswers = {
   call_frequency: "few_monthly",
   family_lines_count: 0,
   family_all_switching: false,
+  fixed_line_carrier: "none",
   device_installment_remaining_months: 0,
   store_support_priority: 2,
   quality_sensitivity: 2,
@@ -46,6 +51,7 @@ const BASE_STEPS: StepId[] = [
   "data",
   "call",
   "family",
+  "fixedLine",
   "installment",
   "support",
   "quality",
@@ -60,9 +66,9 @@ const STEP_META: Record<StepId, { label: string; title: string; hint: string }> 
     hint: "メインで使っているスマホ回線を選んでください。",
   },
   fee: {
-    label: "月額",
-    title: "毎月の通信費はいくら？",
-    hint: "端末代を除いた金額で十分です。わからなければ近い金額にしてください。",
+    label: "通信料",
+    title: "端末代を除いた通信料は？",
+    hint: "基本料・通話料・通信オプションの合計です。端末分割、保証、コンテンツ課金は引いてください。",
   },
   data: {
     label: "データ",
@@ -83,6 +89,11 @@ const STEP_META: Record<StepId, { label: string; title: string; hint: string }> 
     label: "家族割",
     title: "家族も一緒に変える？",
     hint: "自分だけ動く場合は、家族側の請求が変わる可能性があります。",
+  },
+  fixedLine: {
+    label: "自宅回線",
+    title: "自宅のネット回線は？",
+    hint: "光回線とのセット割を判定に入れます。なければ「固定回線なし」で進んでください。",
   },
   installment: {
     label: "残債",
@@ -111,18 +122,6 @@ const STEP_META: Record<StepId, { label: string; title: string; hint: string }> 
   },
 };
 
-const CARRIERS = [
-  { id: "docomo", label: "ドコモ", sub: "docomo" },
-  { id: "au", label: "au", sub: "KDDI" },
-  { id: "softbank", label: "ソフトバンク", sub: "SoftBank" },
-  { id: "rakuten", label: "楽天モバイル", sub: "Rakuten" },
-  { id: "ymobile", label: "Y!mobile", sub: "サブブランド" },
-  { id: "uqmobile", label: "UQ mobile", sub: "サブブランド" },
-  { id: "ahamo", label: "ahamo", sub: "オンライン専用" },
-  { id: "povo", label: "povo", sub: "オンライン専用" },
-  { id: "other", label: "その他/格安SIM", sub: "MVNOなど" },
-];
-
 const POINT_OPTIONS: { id: PointEcosystemType; label: string }[] = [
   { id: "d_point", label: "dポイント" },
   { id: "au_point", label: "Ponta" },
@@ -143,11 +142,13 @@ function ChoiceButton({
   onClick,
   title,
   description,
+  icon,
 }: {
   selected: boolean;
   onClick: () => void;
   title: string;
   description?: string;
+  icon?: ReactNode;
 }) {
   return (
     <button
@@ -155,20 +156,23 @@ function ChoiceButton({
       onClick={onClick}
       className={`group flex min-h-16 w-full items-start gap-3 rounded-lg border px-4 py-3 text-left transition-colors ${
         selected
-          ? "border-zinc-950 bg-white text-zinc-950 shadow-sm"
+          ? "bg-white text-zinc-950"
           : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
       }`}
+      style={selected ? { borderColor: "#60a5fa", boxShadow: "0 0 0 3px rgba(37, 99, 235, 0.10)" } : undefined}
     >
-      <span
-        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-          selected ? "border-zinc-950 bg-zinc-950 text-white" : "border-zinc-300 text-transparent"
-        }`}
-      >
-        <Check className="h-3.5 w-3.5" aria-hidden="true" />
-      </span>
-      <span>
+      {icon}
+      <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold">{title}</span>
         {description && <span className="mt-1 block text-xs leading-5 text-zinc-500">{description}</span>}
+      </span>
+      <span
+        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+          selected ? "border-transparent text-white" : "border-zinc-300 text-transparent"
+        }`}
+        style={selected ? { backgroundColor: "#2563eb" } : undefined}
+      >
+        <Check className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
       </span>
     </button>
   );
@@ -197,7 +201,7 @@ function RangeControl({
     <div>
       <div className="mb-5 rounded-lg border border-zinc-200 bg-white px-4 py-5 text-center">
         <p className="text-sm text-zinc-500">{label}</p>
-        <p className="mt-1 text-3xl font-semibold text-zinc-950">{currency(value)}</p>
+        <p className="mt-1 text-3xl font-semibold tabular-nums text-zinc-950">{currency(value)}</p>
       </div>
       <input
         type="range"
@@ -239,9 +243,10 @@ function FourPointScale({
             onClick={() => onChange(point as 1 | 2 | 3 | 4)}
             className={`h-12 rounded-lg border text-sm font-semibold transition-colors ${
               value === point
-                ? "border-zinc-950 bg-zinc-950 text-white"
+                ? "border-transparent text-white"
                 : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
             }`}
+            style={value === point ? { backgroundColor: "#2563eb" } : undefined}
           >
             {point}
           </button>
@@ -260,6 +265,9 @@ export default function DiagnosisFlow() {
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<DiagnosisAnswers>(INITIAL_ANSWERS);
   const [hydrated, setHydrated] = useState(false);
+  const sessionIdRef = useRef("");
+  const trackedStart = useRef(false);
+  const trackedSteps = useRef<Set<string>>(new Set());
 
   const steps = useMemo<StepId[]>(() => {
     if (answers.family_lines_count > 0) {
@@ -270,6 +278,7 @@ export default function DiagnosisFlow() {
         "call",
         "family",
         "familySwitch",
+        "fixedLine",
         "installment",
         "support",
         "quality",
@@ -284,6 +293,13 @@ export default function DiagnosisFlow() {
   const currentStep = steps[activeStepIndex];
   const meta = STEP_META[currentStep];
   const progress = Math.round(((activeStepIndex + 1) / steps.length) * 100);
+
+  const getSessionId = () => {
+    if (!sessionIdRef.current) {
+      sessionIdRef.current = getOrCreateAnalyticsSessionId();
+    }
+    return sessionIdRef.current;
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -312,6 +328,38 @@ export default function DiagnosisFlow() {
     window.localStorage.setItem("sim_shindan_answers_draft", JSON.stringify(answers));
   }, [answers, hydrated]);
 
+  useEffect(() => {
+    if (!hydrated) return;
+    const token = getSessionId();
+    if (!trackedStart.current) {
+      trackedStart.current = true;
+      trackClientEvent({
+        event_name: "diagnosis_start",
+        session_token: token,
+        metadata: { total_steps: steps.length },
+      });
+    }
+  }, [hydrated, steps.length]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+
+    const key = `${activeStepIndex}:${currentStep}`;
+    if (trackedSteps.current.has(key)) return;
+    trackedSteps.current.add(key);
+    const token = getSessionId();
+
+    trackClientEvent({
+      event_name: "diagnosis_step_view",
+      session_token: token,
+      step_index: activeStepIndex + 1,
+      metadata: {
+        step: currentStep,
+        total_steps: steps.length,
+      },
+    });
+  }, [activeStepIndex, currentStep, hydrated, steps.length]);
+
   const update = <K extends keyof DiagnosisAnswers>(key: K, value: DiagnosisAnswers[K]) => {
     setAnswers((prev) => ({ ...prev, [key]: value }));
   };
@@ -334,6 +382,17 @@ export default function DiagnosisFlow() {
   };
 
   const handleFinish = () => {
+    const token = getSessionId();
+    trackClientEvent({
+      event_name: "diagnosis_complete",
+      session_token: token,
+      step_index: steps.length,
+      metadata: {
+        current_carrier: answers.current_carrier,
+        data_usage_gb: answers.data_usage_gb,
+        total_steps: steps.length,
+      },
+    });
     window.localStorage.setItem("sim_shindan_answers", JSON.stringify(answers));
     window.localStorage.removeItem("sim_shindan_answers_draft");
     router.push("/result");
@@ -345,14 +404,15 @@ export default function DiagnosisFlow() {
     switch (currentStep) {
       case "carrier":
         return (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {CARRIERS.map((carrier) => (
+          <div className="grid gap-3 sm:grid-cols-3">
+            {DIAGNOSIS_CARRIER_OPTIONS.map((carrier) => (
               <ChoiceButton
                 key={carrier.id}
                 selected={answers.current_carrier === carrier.id}
                 onClick={() => update("current_carrier", carrier.id)}
                 title={carrier.label}
-                description={carrier.sub}
+                description={carrier.subLabel}
+                icon={<CarrierIcon carrier={carrier} />}
               />
             ))}
           </div>
@@ -365,7 +425,7 @@ export default function DiagnosisFlow() {
             min={1000}
             max={20000}
             step={500}
-            label="現在の通信費"
+            label="通信料（月額）"
             minLabel="¥1,000"
             maxLabel="¥20,000"
             onChange={(value) => update("current_monthly_fee_yen", value)}
@@ -448,6 +508,30 @@ export default function DiagnosisFlow() {
               title="自分だけ変えたい"
               description="家族の請求増リスクを判定に入れます"
             />
+          </div>
+        );
+
+      case "fixedLine":
+        return (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(
+              [
+                { value: "docomo", title: "ドコモ光 / home 5G", description: "ドコモのセット割対象" },
+                { value: "au", title: "auひかり など au系", description: "自宅セット割の対象" },
+                { value: "softbank", title: "SoftBank光 / Air", description: "おうち割の対象" },
+                { value: "rakuten", title: "楽天ひかり", description: "楽天のセット特典対象" },
+                { value: "other", title: "その他の回線", description: "NURO光・地域系など" },
+                { value: "none", title: "固定回線なし", description: "モバイル回線のみで利用" },
+              ] as { value: FixedLineCarrier; title: string; description: string }[]
+            ).map((option) => (
+              <ChoiceButton
+                key={option.value}
+                selected={answers.fixed_line_carrier === option.value}
+                onClick={() => update("fixed_line_carrier", option.value)}
+                title={option.title}
+                description={option.description}
+              />
+            ))}
           </div>
         );
 
@@ -540,10 +624,11 @@ export default function DiagnosisFlow() {
     {
       label: "現在",
       value: answers.current_carrier
-        ? CARRIERS.find((carrier) => carrier.id === answers.current_carrier)?.label ?? answers.current_carrier
+        ? DIAGNOSIS_CARRIER_OPTIONS.find((carrier) => carrier.id === answers.current_carrier)?.label ??
+          answers.current_carrier
         : "未選択",
     },
-    { label: "月額", value: currency(answers.current_monthly_fee_yen) },
+    { label: "通信料", value: currency(answers.current_monthly_fee_yen) },
     {
       label: "データ",
       value: answers.data_usage_gb === "unknown" ? "不明" : `${answers.data_usage_gb}GB`,
@@ -555,8 +640,8 @@ export default function DiagnosisFlow() {
   ];
 
   return (
-    <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
-      <div className="rounded-lg border border-zinc-200 bg-white shadow-sm">
+    <section className="grid gap-5 lg:grid-cols-3">
+      <div className="rounded-lg border border-zinc-200 bg-white shadow-[0_18px_50px_rgba(24,24,27,0.06)] lg:col-span-2">
         <div className="border-b border-zinc-100 px-5 py-4 sm:px-6">
           <div className="mb-3 flex items-center justify-between text-xs text-zinc-500">
             <span>
@@ -565,7 +650,10 @@ export default function DiagnosisFlow() {
             <span>{progress}%</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
-            <div className="h-full rounded-full bg-amber-500 transition-all" style={{ width: `${progress}%` }} />
+            <div
+              className="h-full rounded-full transition-all"
+              style={{ width: `${progress}%`, backgroundColor: "#2563eb" }}
+            />
           </div>
         </div>
 
@@ -585,7 +673,7 @@ export default function DiagnosisFlow() {
             disabled={activeStepIndex === 0}
             className="inline-flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-950 disabled:invisible"
           >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            <ArrowLeft className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
             戻る
           </button>
           <div className="flex items-center gap-2">
@@ -594,17 +682,18 @@ export default function DiagnosisFlow() {
               onClick={reset}
               className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100"
             >
-              <RotateCcw className="h-4 w-4" aria-hidden="true" />
+              <Refresh className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
               リセット
             </button>
             <button
               type="button"
               onClick={goNext}
               disabled={!canProceed}
-              className="inline-flex h-10 items-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:bg-zinc-200 disabled:text-zinc-500"
+              className="inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-semibold text-white transition-colors disabled:bg-zinc-200 disabled:text-zinc-500"
+              style={canProceed ? { backgroundColor: "#2563eb" } : undefined}
             >
               {activeStepIndex === steps.length - 1 ? "結果を見る" : "次へ"}
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              <ArrowRight className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -612,7 +701,7 @@ export default function DiagnosisFlow() {
 
       <aside className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm lg:sticky lg:top-5 lg:h-fit">
         <div className="flex items-center gap-2">
-          <Gauge className="h-4 w-4 text-zinc-700" aria-hidden="true" />
+          <StatsUpSquare className="h-4 w-4 text-zinc-700" strokeWidth={1.8} aria-hidden="true" />
           <p className="text-sm font-semibold text-zinc-950">いま見ている条件</p>
         </div>
         <dl className="mt-4 divide-y divide-zinc-100">
@@ -625,14 +714,14 @@ export default function DiagnosisFlow() {
         </dl>
         <div className="mt-4 rounded-lg bg-stone-50 p-3">
           <div className="flex gap-2">
-            <CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" aria-hidden="true" />
+            <InfoCircle className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" strokeWidth={1.8} aria-hidden="true" />
             <p className="text-xs leading-5 text-zinc-600">
               Q1〜Q3以外は近い答えで進めて構いません。判定では不確実な条件も明示します。
             </p>
           </div>
         </div>
         <div className="mt-4 flex gap-2 text-xs text-zinc-500">
-          <ReceiptText className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <Page className="h-4 w-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
           <span>入力内容はブラウザ内に一時保存されます。</span>
         </div>
       </aside>

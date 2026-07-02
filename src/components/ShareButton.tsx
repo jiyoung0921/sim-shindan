@@ -1,6 +1,7 @@
 "use client";
 
-import { Copy, Share2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, Copy, ShareIos } from "iconoir-react";
 import { DiagnosisResult } from "@/lib/types";
 
 interface ShareButtonProps {
@@ -14,6 +15,15 @@ const VERDICT_TEXT: Record<string, string> = {
 };
 
 export default function ShareButton({ result }: ShareButtonProps) {
+  const [copied, setCopied] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   const best = result.recommendations[0];
   const saving = best?.cash_saving_per_month ?? 0;
   const annualSaving = best?.annual_saving ?? 0;
@@ -27,6 +37,12 @@ export default function ShareButton({ result }: ShareButtonProps) {
   ]
     .filter(Boolean)
     .join("\n");
+
+  const markCopied = () => {
+    setCopied(true);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleShare = async () => {
     const url = typeof window !== "undefined" ? window.location.origin : "";
@@ -45,10 +61,12 @@ export default function ShareButton({ result }: ShareButtonProps) {
     }
 
     await navigator.clipboard.writeText(shareText);
+    markCopied();
   };
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(shareText);
+    markCopied();
   };
 
   return (
@@ -58,7 +76,7 @@ export default function ShareButton({ result }: ShareButtonProps) {
         onClick={handleShare}
         className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
       >
-        <Share2 className="h-4 w-4" aria-hidden="true" />
+        <ShareIos className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
         共有する
       </button>
       <button
@@ -66,8 +84,17 @@ export default function ShareButton({ result }: ShareButtonProps) {
         onClick={handleCopy}
         className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
       >
-        <Copy className="h-4 w-4" aria-hidden="true" />
-        コピー
+        {copied ? (
+          <>
+            <Check className="h-4 w-4 text-emerald-700" strokeWidth={2} aria-hidden="true" />
+            コピーしました
+          </>
+        ) : (
+          <>
+            <Copy className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+            コピー
+          </>
+        )}
       </button>
     </div>
   );

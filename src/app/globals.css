@@ -5,12 +5,33 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN",
-    "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Hiragino Sans",
+    "Hiragino Kaku Gothic ProN",
+    "Yu Gothic",
+    Meiryo,
+    sans-serif;
+  /* 日本語の約物・かなを詰めて、見出しと本文の密度を上げる */
+  font-feature-settings: "palt" 1;
+  letter-spacing: 0.015em;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* レンジスライダーのスタイル */
+::selection {
+  background: #18181b;
+  color: #fafaf9;
+}
+
+:focus-visible {
+  outline: 2px solid #18181b;
+  outline-offset: 2px;
+}
+
+/* レンジスライダー */
 input[type="range"] {
   height: 32px;
   background: transparent;

@@ -1,13 +1,21 @@
-import { getAllPlansAdmin, getPendingDiffs, getRecentAuditLog } from "@/lib/db";
 import Link from "next/link";
+import { ArrowRight, WarningTriangle } from "iconoir-react";
+import { getAllPlansAdmin, getPendingDiffs, getRecentAuditLog } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 const STATUS_BADGE: Record<string, string> = {
-  draft: "bg-slate-600 text-slate-200",
-  review: "bg-amber-700 text-amber-100",
-  published: "bg-emerald-700 text-emerald-100",
-  archived: "bg-slate-700 text-slate-400",
+  draft: "bg-stone-100 text-zinc-600",
+  review: "bg-amber-50 text-amber-800",
+  published: "bg-emerald-50 text-emerald-700",
+  archived: "bg-stone-100 text-zinc-400",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  draft: "下書き",
+  review: "レビュー中",
+  published: "公開中",
+  archived: "終了",
 };
 
 const PLAN_TYPE_LABEL: Record<string, string> = {
@@ -21,103 +29,105 @@ export default async function AdminDashboard() {
   const [plans, diffs, auditLog] = await Promise.all([
     getAllPlansAdmin(),
     getPendingDiffs(),
-    getRecentAuditLog(10),
+    getRecentAuditLog(8),
   ]);
 
-  const byStatus = {
-    published: plans.filter((p) => p.status === "published").length,
-    review: plans.filter((p) => p.status === "review").length,
-    draft: plans.filter((p) => p.status === "draft").length,
-    archived: plans.filter((p) => p.status === "archived").length,
-  };
-
+  const publishedCount = plans.filter((p) => p.status === "published").length;
+  const reviewCount = plans.filter((p) => p.status === "review").length;
   const pendingCount = diffs.filter((d) => d.status === "pending").length;
   const blockedCount = diffs.filter((d) => d.status === "auto_blocked").length;
 
-  return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      <h1 className="text-2xl font-bold text-white">ダッシュボード</h1>
+  const kpis = [
+    { label: "公開プラン", value: publishedCount, tone: "text-zinc-950" },
+    {
+      label: "承認待ち差分",
+      value: pendingCount,
+      tone: pendingCount > 0 ? "text-amber-700" : "text-zinc-400",
+    },
+    {
+      label: "異常ブロック",
+      value: blockedCount,
+      tone: blockedCount > 0 ? "text-red-600" : "text-zinc-400",
+    },
+    {
+      label: "レビュー中",
+      value: reviewCount,
+      tone: reviewCount > 0 ? "text-zinc-950" : "text-zinc-400",
+    },
+  ];
 
-      {/* KPIカード */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-          <p className="text-xs text-slate-400 mb-1">公開プラン数</p>
-          <p className="text-3xl font-bold text-emerald-400">{byStatus.published}</p>
-        </div>
-        <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-          <p className="text-xs text-slate-400 mb-1">承認待ち差分</p>
-          <p className={`text-3xl font-bold ${pendingCount > 0 ? "text-amber-400" : "text-slate-400"}`}>
-            {pendingCount}
-          </p>
-        </div>
-        <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-          <p className="text-xs text-slate-400 mb-1">異常ブロック</p>
-          <p className={`text-3xl font-bold ${blockedCount > 0 ? "text-red-400" : "text-slate-400"}`}>
-            {blockedCount}
-          </p>
-        </div>
-        <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-          <p className="text-xs text-slate-400 mb-1">レビュー中</p>
-          <p className="text-3xl font-bold text-blue-400">{byStatus.review}</p>
-        </div>
+  return (
+    <div className="space-y-8">
+      <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">ダッシュボード</h1>
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {kpis.map((kpi) => (
+          <div key={kpi.label} className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+            <p className="text-xs font-medium text-zinc-500">{kpi.label}</p>
+            <p className={`mt-2 text-3xl font-semibold tabular-nums ${kpi.tone}`}>{kpi.value}</p>
+          </div>
+        ))}
       </div>
 
-      {/* 差分キューアラート */}
       {(pendingCount > 0 || blockedCount > 0) && (
-        <div className="bg-amber-900/40 border border-amber-700 rounded-xl p-4 flex items-center justify-between">
-          <div>
-            <p className="font-semibold text-amber-300">
-              ⚠️ 未承認の差分が{pendingCount + blockedCount}件あります
-            </p>
-            <p className="text-sm text-amber-400 mt-0.5">
-              {blockedCount > 0 && `うち${blockedCount}件は異常検知でブロック済み。`}
-              確認後に公開してください。
-            </p>
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-amber-200 bg-amber-50 p-5">
+          <div className="flex gap-3">
+            <WarningTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden="true" />
+            <div>
+              <p className="text-sm font-semibold text-amber-900">
+                未承認の差分が{pendingCount + blockedCount}件あります
+              </p>
+              <p className="mt-1 text-sm text-amber-800">
+                {blockedCount > 0 && `うち${blockedCount}件は異常検知でブロック済み。`}
+                内容を確認してから公開してください。
+              </p>
+            </div>
           </div>
           <Link
             href="/admin/diffs"
-            className="px-4 py-2 bg-amber-600 text-white text-sm font-semibold rounded-lg hover:bg-amber-500 transition-colors shrink-0"
+            className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
           >
-            差分を確認する →
+            差分を確認
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
       )}
 
-      {/* プラン一覧（要約） */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">プラン一覧</h2>
-          <Link href="/admin/plans" className="text-sm text-blue-400 hover:underline">
-            すべて見る →
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-zinc-950">プラン一覧</h2>
+          <Link
+            href="/admin/plans"
+            className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-950"
+          >
+            すべて見る
           </Link>
         </div>
-        <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-700 text-slate-400 text-xs">
-                <th className="px-4 py-3 text-left font-medium">プラン名</th>
-                <th className="px-4 py-3 text-left font-medium">キャリア</th>
-                <th className="px-4 py-3 text-left font-medium">種別</th>
-                <th className="px-4 py-3 text-left font-medium">ステータス</th>
-                <th className="px-4 py-3 text-left font-medium">更新日</th>
+              <tr className="border-b border-zinc-100 text-left text-xs text-zinc-500">
+                <th className="px-5 py-3 font-medium">プラン名</th>
+                <th className="px-5 py-3 font-medium">キャリア</th>
+                <th className="px-5 py-3 font-medium">種別</th>
+                <th className="px-5 py-3 font-medium">ステータス</th>
+                <th className="px-5 py-3 font-medium">更新日</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-zinc-100">
               {plans.slice(0, 10).map((plan) => (
-                <tr key={plan.id} className="border-b border-slate-700/50 hover:bg-slate-700/30">
-                  <td className="px-4 py-3 font-medium text-white">
-                    <Link href={`/admin/plans/${plan.id}`} className="hover:underline">
-                      {plan.plan_name}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-slate-300">{plan.carrier_id}</td>
-                  <td className="px-4 py-3 text-slate-400">{PLAN_TYPE_LABEL[plan.plan_type]}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_BADGE[plan.status]}`}>
-                      {plan.status}
+                <tr key={plan.id} className="transition-colors hover:bg-stone-50">
+                  <td className="px-5 py-3 font-medium text-zinc-950">{plan.plan_name}</td>
+                  <td className="px-5 py-3 text-zinc-600">{plan.carrier_id}</td>
+                  <td className="px-5 py-3 text-zinc-600">{PLAN_TYPE_LABEL[plan.plan_type]}</td>
+                  <td className="px-5 py-3">
+                    <span
+                      className={`rounded-md px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[plan.status]}`}
+                    >
+                      {STATUS_LABEL[plan.status] ?? plan.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-400 text-xs">
+                  <td className="px-5 py-3 text-xs text-zinc-500">
                     {new Date(plan.updated_at).toLocaleDateString("ja-JP")}
                   </td>
                 </tr>
@@ -125,29 +135,32 @@ export default async function AdminDashboard() {
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
-      {/* 最近の更新履歴 */}
       {auditLog.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold text-white mb-4">最近の更新</h2>
-          <div className="space-y-2">
+        <section>
+          <h2 className="mb-3 text-base font-semibold text-zinc-950">最近の更新</h2>
+          <div className="divide-y divide-zinc-100 rounded-lg border border-zinc-200 bg-white shadow-sm">
             {auditLog.map((entry) => (
-              <div key={entry.id} className="bg-slate-800 rounded-lg px-4 py-3 border border-slate-700 flex items-center gap-4">
-                <span className={`text-xs px-2 py-0.5 rounded font-medium ${
-                  entry.action === "created" ? "bg-emerald-800 text-emerald-200" : "bg-blue-800 text-blue-200"
-                }`}>
-                  {entry.action}
+              <div key={entry.id} className="flex items-center gap-4 px-5 py-3">
+                <span
+                  className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${
+                    entry.action === "created"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-stone-100 text-zinc-600"
+                  }`}
+                >
+                  {entry.action === "created" ? "新規" : "更新"}
                 </span>
-                <span className="text-white text-sm font-medium">{entry.plan_name}</span>
-                <span className="text-slate-400 text-sm flex-1">{entry.summary}</span>
-                <span className="text-slate-500 text-xs">
+                <span className="shrink-0 text-sm font-medium text-zinc-950">{entry.plan_name}</span>
+                <span className="min-w-0 flex-1 truncate text-sm text-zinc-500">{entry.summary}</span>
+                <span className="shrink-0 text-xs text-zinc-400">
                   {new Date(entry.published_at).toLocaleDateString("ja-JP")}
                 </span>
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
     </div>
   );

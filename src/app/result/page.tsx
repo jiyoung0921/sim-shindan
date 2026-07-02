@@ -3,30 +3,33 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  Activity,
   ArrowLeft,
   BadgeCheck,
-  CheckCircle2,
-  ChevronDown,
-  Clock3,
-  ReceiptText,
-  RotateCcw,
+  CheckCircle,
+  Clock,
+  NavArrowDown,
+  Page,
+  Refresh,
   ShieldCheck,
-} from "lucide-react";
+} from "iconoir-react";
 import { DiagnosisAnswers, DiagnosisResult, PlanRecord } from "@/lib/types";
 import { runDiagnosis } from "@/lib/scoring";
 import PlanCard from "@/components/PlanCard";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import ShareButton from "@/components/ShareButton";
+import { getOrCreateAnalyticsSessionId, trackClientEvent } from "@/lib/client-analytics";
 
 const VERDICT_CONFIG = {
   switch_now: {
     label: "今すぐ変えるべき",
     title: "節約余地が大きく、乗り換え摩擦も低めです。",
-    badge: "bg-emerald-100 text-emerald-800",
-    border: "border-emerald-200",
-    accent: "text-emerald-700",
-    icon: CheckCircle2,
+    badge: "",
+    border: "",
+    accent: "",
+    badgeStyle: { backgroundColor: "#eff6ff", color: "#2563eb" },
+    borderStyle: { borderColor: "#bfdbfe" },
+    accentStyle: { color: "#2563eb" },
+    icon: CheckCircle,
   },
   switch_next_cycle: {
     label: "次のタイミングで変えるべき",
@@ -34,7 +37,10 @@ const VERDICT_CONFIG = {
     badge: "bg-amber-100 text-amber-800",
     border: "border-amber-200",
     accent: "text-amber-800",
-    icon: Clock3,
+    badgeStyle: undefined,
+    borderStyle: undefined,
+    accentStyle: undefined,
+    icon: Clock,
   },
   keep_current: {
     label: "今は変えない方がよい",
@@ -42,6 +48,9 @@ const VERDICT_CONFIG = {
     badge: "bg-zinc-100 text-zinc-800",
     border: "border-zinc-200",
     accent: "text-zinc-800",
+    badgeStyle: undefined,
+    borderStyle: undefined,
+    accentStyle: undefined,
     icon: ShieldCheck,
   },
 };
@@ -52,10 +61,6 @@ const ACTION_LABEL: Record<number, string> = {
   3: "オンライン専用・サブブランドへ移行",
   4: "MVNOへ移行",
 };
-
-function generateSessionId(): string {
-  return "xxxx-xxxx-xxxx".replace(/x/g, () => Math.floor(Math.random() * 16).toString(16));
-}
 
 function yen(value: number) {
   return `¥${value.toLocaleString()}`;
@@ -88,7 +93,7 @@ function ScoreBar({ label, value, inverted = false }: { label: string; value: nu
 export default function ResultPage() {
   const [result, setResult] = useState<DiagnosisResult | null>(null);
   const [answers, setAnswers] = useState<DiagnosisAnswers | null>(null);
-  const [sessionId] = useState(generateSessionId);
+  const [sessionId, setSessionId] = useState("");
   const [showAlternatives, setShowAlternatives] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -103,17 +108,30 @@ export default function ResultPage() {
 
         const savedAnswers: DiagnosisAnswers = JSON.parse(raw);
         setAnswers(savedAnswers);
+        const activeSessionId = getOrCreateAnalyticsSessionId();
+        setSessionId(activeSessionId);
 
         const res = await fetch("/data/plans.json");
         const plans: PlanRecord[] = await res.json();
         const diagnosisResult = runDiagnosis(plans, savedAnswers);
         setResult(diagnosisResult);
 
+        trackClientEvent({
+          event_name: "result_view",
+          session_token: activeSessionId,
+          verdict: diagnosisResult.verdict,
+          plan_id: diagnosisResult.recommendations[0]?.plan.id,
+          metadata: {
+            recommendation_count: diagnosisResult.recommendations.length,
+            recommended_action: diagnosisResult.recommended_action,
+          },
+        });
+
         fetch("/api/sessions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            session_token: sessionId,
+            session_token: activeSessionId,
             answers: savedAnswers,
             result: diagnosisResult,
           }),
@@ -126,13 +144,13 @@ export default function ResultPage() {
       }
     };
     run();
-  }, [sessionId]);
+  }, []);
 
   if (!result && !error) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-stone-50 px-4 text-zinc-950">
         <div className="rounded-lg border border-zinc-200 bg-white p-6 text-center shadow-sm">
-          <Activity className="mx-auto h-6 w-6 animate-pulse text-zinc-700" aria-hidden="true" />
+          <Refresh className="mx-auto h-6 w-6 animate-spin text-zinc-700" strokeWidth={1.8} aria-hidden="true" />
           <p className="mt-3 text-sm font-medium text-zinc-700">診断しています</p>
         </div>
       </main>
@@ -167,7 +185,7 @@ export default function ResultPage() {
           href="/"
           className="inline-flex items-center gap-2 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-950"
         >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          <ArrowLeft className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
           トップ
         </Link>
         <span className="text-sm font-semibold text-zinc-950">診断結果</span>
@@ -175,18 +193,24 @@ export default function ResultPage() {
           href="/diagnosis"
           className="inline-flex items-center gap-2 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-950"
         >
-          <RotateCcw className="h-4 w-4" aria-hidden="true" />
+          <Refresh className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
           再診断
         </Link>
       </nav>
 
-      <div className="mx-auto grid max-w-6xl gap-5 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_330px]">
-        <div className="space-y-5">
-          <section className={`rounded-lg border ${verdictCfg.border} bg-white p-5 shadow-sm sm:p-6`}>
+      <div className="mx-auto grid max-w-6xl gap-5 px-4 sm:px-6 lg:grid-cols-3">
+        <div className="space-y-5 lg:col-span-2">
+          <section
+            className={`rounded-lg border ${verdictCfg.border} bg-white p-5 shadow-sm sm:p-6`}
+            style={verdictCfg.borderStyle}
+          >
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
               <div className="max-w-2xl">
-                <span className={`inline-flex items-center gap-2 rounded-lg px-3 py-1 text-sm font-semibold ${verdictCfg.badge}`}>
-                  <VerdictIcon className="h-4 w-4" aria-hidden="true" />
+                <span
+                  className={`inline-flex items-center gap-2 rounded-lg px-3 py-1 text-sm font-semibold ${verdictCfg.badge}`}
+                  style={verdictCfg.badgeStyle}
+                >
+                  <VerdictIcon className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
                   {verdictCfg.label}
                 </span>
                 <h1 className="mt-4 text-2xl font-semibold leading-tight text-zinc-950 sm:text-4xl">
@@ -198,10 +222,10 @@ export default function ResultPage() {
               {best && (
                 <div className="shrink-0 border-t border-zinc-200 pt-4 sm:w-56 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0">
                   <p className="text-xs text-zinc-500">現金支出ベース</p>
-                  <p className={`mt-1 text-2xl font-semibold ${hasSaving ? "text-emerald-700" : "text-zinc-950"}`}>
+                  <p className={`mt-1 text-2xl font-semibold tabular-nums ${hasSaving ? "text-emerald-700" : "text-zinc-950"}`}>
                     {hasSaving ? `月 -${yen(best.cash_saving_per_month)}` : "節約なし"}
                   </p>
-                  <p className="mt-1 text-xs text-zinc-500">
+                  <p className="mt-1 text-xs tabular-nums text-zinc-500">
                     {hasSaving ? `年間 -${yen(best.annual_saving)}` : "条件によって割高になる可能性"}
                   </p>
                 </div>
@@ -221,7 +245,7 @@ export default function ResultPage() {
                 <h2 className="text-lg font-semibold text-zinc-950">最有力プラン</h2>
                 <span className="text-xs text-zinc-500">編集スコア順。PRとは分離。</span>
               </div>
-              <PlanCard recommendation={best} showDetail />
+              <PlanCard recommendation={best} showDetail sessionId={sessionId} verdict={result.verdict} />
             </section>
           )}
 
@@ -233,15 +257,21 @@ export default function ResultPage() {
                 className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left text-sm font-semibold text-zinc-950 transition-colors hover:bg-zinc-50"
               >
                 2・3位の候補
-                <ChevronDown
-                  className={`h-4 w-4 text-zinc-500 transition-transform ${showAlternatives ? "rotate-180" : ""}`}
-                  aria-hidden="true"
-                />
+                  <NavArrowDown
+                    className={`h-4 w-4 text-zinc-500 transition-transform ${showAlternatives ? "rotate-180" : ""}`}
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  />
               </button>
               {showAlternatives && (
                 <div className="space-y-4 border-t border-zinc-100 p-4">
                   {result.recommendations.slice(1).map((recommendation) => (
-                    <PlanCard key={recommendation.plan.id} recommendation={recommendation} />
+                    <PlanCard
+                      key={recommendation.plan.id}
+                      recommendation={recommendation}
+                      sessionId={sessionId}
+                      verdict={result.verdict}
+                    />
                   ))}
                 </div>
               )}
@@ -251,10 +281,10 @@ export default function ResultPage() {
           <details className="group rounded-lg border border-zinc-200 bg-white shadow-sm">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-sm font-semibold text-zinc-950 transition-colors hover:bg-zinc-50">
               <span className="inline-flex items-center gap-2">
-                <ReceiptText className="h-4 w-4" aria-hidden="true" />
+                <Page className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
                 判定の根拠
               </span>
-              <ChevronDown className="h-4 w-4 text-zinc-500 transition-transform group-open:rotate-180" aria-hidden="true" />
+              <NavArrowDown className="h-4 w-4 text-zinc-500 transition-transform group-open:rotate-180" strokeWidth={2} aria-hidden="true" />
             </summary>
             <div className="border-t border-zinc-100 px-5 py-4">
               {best && (
@@ -272,7 +302,7 @@ export default function ResultPage() {
                   </div>
                   <dl className="mt-5 grid gap-3 rounded-lg bg-stone-50 p-4 text-sm sm:grid-cols-2">
                     <div>
-                      <dt className="text-xs text-zinc-500">現在の月額</dt>
+                      <dt className="text-xs text-zinc-500">現在の通信料</dt>
                       <dd className="mt-1 font-medium text-zinc-950">{yen(answers.current_monthly_fee_yen)}</dd>
                     </div>
                     <div>
@@ -308,7 +338,7 @@ export default function ResultPage() {
           {result.verdict !== "keep_current" && (
             <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
               <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-950">
-                <BadgeCheck className="h-4 w-4" aria-hidden="true" />
+                <BadgeCheck className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
                 乗り換え前に確認
               </h2>
               <ul className="mt-4 space-y-3 text-sm leading-6 text-zinc-700">
@@ -329,7 +359,7 @@ export default function ResultPage() {
         <aside className="space-y-5 lg:sticky lg:top-5 lg:h-fit">
           <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
             <p className="text-sm font-semibold text-zinc-950">次にすること</p>
-            <p className={`mt-3 text-lg font-semibold leading-7 ${verdictCfg.accent}`}>
+            <p className={`mt-3 text-lg font-semibold leading-7 ${verdictCfg.accent}`} style={verdictCfg.accentStyle}>
               {ACTION_LABEL[result.recommended_action]}
             </p>
             <p className="mt-3 text-sm leading-6 text-zinc-600">
@@ -349,7 +379,7 @@ export default function ResultPage() {
           <FeedbackWidget sessionId={sessionId} />
 
           <section className="rounded-lg border border-zinc-200 bg-white p-5 text-xs leading-6 text-zinc-500 shadow-sm">
-            <p>料金データ取得日: {formatDate(result.plan_data_freshness)}</p>
+            <p>料金データ確認日: {formatDate(result.plan_data_freshness)}</p>
             <p>診断生成: {new Date(result.generated_at).toLocaleString("ja-JP")}</p>
             <p className="mt-2">本診断は情報提供目的です。最終的な料金は各社公式ページで確認してください。</p>
           </section>

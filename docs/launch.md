@@ -40,7 +40,10 @@ git push -u origin main
 ### 2-2. テーブル作成
 1. Supabase ダッシュボード → SQL Editor
 2. `supabase/migrations/001_initial.sql` の中身を全コピーして実行
-3. 「Success」と表示されればOK
+3. `supabase/migrations/002_plan_availability.sql` の中身を全コピーして実行
+4. `supabase/migrations/003_plan_clicks.sql` の中身を全コピーして実行
+5. `supabase/migrations/004_analytics_events.sql` の中身を全コピーして実行
+6. 「Success」と表示されればOK
 
 作成されるテーブル:
 - `plans` — プランデータ（公開用）
@@ -50,8 +53,24 @@ git push -u origin main
 - `feedbacks` — ユーザーフィードバック
 - `audit_log` — 更新履歴（公開用）
 - `new_service_signals` — 新サービス検知
+- `plan_clicks` — 公式リンククリック計測
+- `analytics_events` — 診断ファネル計測
 
-### 2-3. APIキーをメモ
+### 2-3. 初期プランデータを投入
+
+ローカルまたはGitHub Actionsから、`public/data/plans.json` の内容を `plans` テーブルへ投入する。
+
+```bash
+cd /Users/jiyoung/sim-shindan
+
+SUPABASE_URL=https://xxxx.supabase.co \
+SUPABASE_SERVICE_KEY=eyJ... \
+npm run seed:plans
+```
+
+`Seeded 13 plans` と表示されればOK。これを実行しないと、管理画面のプラン一覧とスクレイパーの差分比較が空のDBを基準に動く。
+
+### 2-4. APIキーをメモ
 Settings → API から以下3つを控える:
 
 ```
@@ -108,6 +127,15 @@ ADMIN_BASE_URL                  = https://（取得したドメイン）
 
 同じ値を Workers プロジェクト → Settings → Variables and Secrets にも Runtime variables/secrets として設定する。`SUPABASE_SERVICE_KEY` と `ADMIN_SECRET_TOKEN` はSecret扱いにする。
 
+承認済みの差分を `public/data/plans.json` に自動exportしたい場合は、以下も Runtime variables/secrets に追加する。
+
+```
+GITHUB_REPOSITORY       = YOUR_USERNAME/sim-shindan
+GITHUB_DISPATCH_TOKEN   = repository_dispatch を実行できる Fine-grained PAT
+```
+
+未設定でも管理画面での承認は成功する。その場合、`plans.json` への反映は GitHub Actions の「プランJSONエクスポート」を手動実行する。
+
 ### 3-5. カスタムドメインを設定
 Workers プロジェクト → Settings → Domains & Routes → Add  
 → 購入したドメインを入力 → DNSは自動設定される（Cloudflare内完結）
@@ -133,6 +161,8 @@ GitHubリポジトリ → Settings → Secrets and variables → Actions → New
 
 設定後、翌朝JST 07:00に初回スクレイパーが自動実行される。  
 手動で今すぐ実行したい場合: Actions → 料金スクレイパー → Run workflow
+
+`/admin/diffs` で承認した内容を静的フォールバックにも反映するため、GitHub Actions → プランJSONエクスポート → Run workflow を1回実行し、`public/data/plans.json` が更新されることを確認する。
 
 ---
 
@@ -177,6 +207,10 @@ Slack に通知（設定している場合）
 /admin/diffs で内容を確認・承認
   ↓
 承認後、plans テーブルに反映・/history に公開
+  ↓
+GITHUB_DISPATCH_TOKEN 設定済みなら GitHub Actions が plans.json をexportしてcommit
+  ↓
+Cloudflare のGit連携が main push を検知して再デプロイ
 ```
 
 ---

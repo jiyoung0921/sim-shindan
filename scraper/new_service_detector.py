@@ -43,12 +43,11 @@ CARRIER_DOMAIN_KEYWORDS = [
     "mobile", "simcard", "mvno", "gsm", "lte", "5g",
     "ketai", "sumaho", "sim", "smartphone",
 ]
+MIN_SIGNAL_CONFIDENCE = 0.5
 
 # PR TIMES — 通信カテゴリ RSS
 PRTIMES_RSS_URLS = [
-    "https://prtimes.jp/rss/all.rss",  # 全件（フィルタリング前）
-    "https://prtimes.jp/rss/tag/%E6%A0%BC%E5%AE%89SIM.rss",  # 格安SIM タグ
-    "https://prtimes.jp/rss/tag/MVNO.rss",
+    "https://prtimes.jp/index.rdf",  # 全件（フィルタリング前）
 ]
 
 # JPRS 新規登録ドメイン一覧 (公開ゾーンデータ, サンプル)
@@ -112,7 +111,7 @@ async def scan_prtimes_rss(
 
                 confidence, matched, has_negative = score_text(combined)
 
-                if confidence < 0.2:
+                if confidence < MIN_SIGNAL_CONFIDENCE:
                     continue  # スコアが低すぎる → スキップ
 
                 signals.append({
@@ -120,7 +119,7 @@ async def scan_prtimes_rss(
                     "title": title[:500],
                     "url": url,
                     "raw_content": summary[:1000],
-                    "signal_type": "pr_times",
+                    "signal_type": "new_plan",
                     "confidence": round(confidence, 3),
                     "matched_keywords": matched,
                     "negative_match": has_negative,

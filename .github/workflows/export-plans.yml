@@ -1,0 +1,53 @@
+name: プランJSONエクスポート
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types:
+      - plans_export
+
+permissions:
+  contents: write
+
+concurrency:
+  group: export-plans
+  cancel-in-progress: false
+
+jobs:
+  export:
+    name: Supabaseからplans.jsonを更新
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: コードチェックアウト
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Node.js セットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: 依存パッケージインストール
+        run: npm ci
+
+      - name: Supabaseからplans.jsonを生成
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: npm run export:plans
+
+      - name: 変更をcommit
+        run: |
+          if git diff --quiet -- public/data/plans.json; then
+            echo "No changes in public/data/plans.json"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/plans.json
+          git commit -m "Export plans from Supabase"
+          git push

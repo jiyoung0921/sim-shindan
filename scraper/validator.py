@@ -14,6 +14,15 @@ from pydantic import BaseModel, Field, field_validator
 logger = logging.getLogger(__name__)
 
 ANOMALY_THRESHOLD_PCT = 30.0  # ±30% で異常フラグ
+NON_MONTHLY_TIER_LABEL_PATTERNS = (
+    "6時間",
+    "24時間",
+    "7日",
+    "90日",
+    "180日",
+    "365日",
+    "回分",
+)
 
 
 # ─── Pydantic モデル定義 ──────────────────────────────────────────────
@@ -22,6 +31,18 @@ class PriceTier(BaseModel):
     up_to_gb: Optional[Union[float, str]] = None
     monthly_fee_yen: int = Field(ge=0, le=50000)
     label: Optional[str] = None
+
+    @field_validator("label")
+    @classmethod
+    def label_must_fit_monthly_model(cls, v: Optional[str]) -> Optional[str]:
+        if not v:
+            return v
+        for pattern in NON_MONTHLY_TIER_LABEL_PATTERNS:
+            if pattern in v:
+                raise ValueError(
+                    f"tier label={v!r} is not compatible with monthly comparison model"
+                )
+        return v
 
 
 class Billing(BaseModel):
@@ -43,6 +64,13 @@ class Evidence(BaseModel):
     fetched_at: str
     notes_hash: Optional[str] = None
 
+    @field_validator("source_url")
+    @classmethod
+    def source_url_must_be_official_url(cls, v: str) -> str:
+        if not v or not v.startswith(("https://", "http://")):
+            raise ValueError("evidence.source_url must be an official HTTP(S) URL")
+        return v
+
 
 class PlanRecordValidated(BaseModel):
     id: str
@@ -51,6 +79,15 @@ class PlanRecordValidated(BaseModel):
     plan_type: str
     billing: Billing
     evidence: Evidence
+    plan_status: str = "unknown"
+
+    @field_validator("plan_status")
+    @classmethod
+    def plan_status_must_be_known_value(cls, v: str) -> str:
+        allowed = {"active", "ended", "existing_only", "unknown"}
+        if v not in allowed:
+            raise ValueError(f"plan_status must be one of {sorted(allowed)}")
+        return v
 
 
 # ─── 異常フラグ生成 ──────────────────────────────────────────────────

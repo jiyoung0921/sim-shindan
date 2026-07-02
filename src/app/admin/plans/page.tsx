@@ -1,37 +1,37 @@
-import { getAllPlansAdmin } from "@/lib/db";
 import Link from "next/link";
+import { OpenNewWindow } from "iconoir-react";
+import { PlanAvailabilityControl } from "./PlanAvailabilityControl";
+import { getAllPlansAdmin } from "@/lib/db";
+import type { PlanAvailability } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 const STATUS_BADGE: Record<string, string> = {
-  draft:     "bg-slate-600 text-slate-200",
-  review:    "bg-amber-700 text-amber-100",
-  published: "bg-emerald-700 text-emerald-100",
-  archived:  "bg-slate-700 text-slate-400",
+  draft: "bg-stone-100 text-zinc-600",
+  review: "bg-amber-50 text-amber-800",
+  published: "bg-emerald-50 text-emerald-700",
+  archived: "bg-stone-100 text-zinc-400",
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  draft:     "下書き",
-  review:    "レビュー中",
+  draft: "下書き",
+  review: "レビュー中",
   published: "公開中",
-  archived:  "終了",
+  archived: "終了",
 };
 
 const PLAN_TYPE_LABEL: Record<string, string> = {
-  MNO:         "大手",
-  sub_brand:   "サブブランド",
+  MNO: "大手",
+  sub_brand: "サブブランド",
   online_only: "オンライン専用",
-  MVNO:        "MVNO",
+  MVNO: "MVNO",
 };
 
-const CARRIER_BADGE: Record<string, string> = {
-  docomo:   "bg-red-900/60 text-red-300",
-  au:       "bg-orange-900/60 text-orange-300",
-  softbank: "bg-yellow-900/60 text-yellow-300",
-  rakuten:  "bg-pink-900/60 text-pink-300",
-  iij:      "bg-blue-900/60 text-blue-300",
-  mineo:    "bg-green-900/60 text-green-300",
-  nuro:     "bg-purple-900/60 text-purple-300",
+const AVAILABILITY_LABEL: Record<PlanAvailability, string> = {
+  active: "受付中",
+  ended: "受付終了",
+  existing_only: "既存のみ",
+  unknown: "未確認",
 };
 
 export default async function PlansAdminPage() {
@@ -39,118 +39,139 @@ export default async function PlansAdminPage() {
 
   const byStatus = {
     published: plans.filter((p) => p.status === "published").length,
-    review:    plans.filter((p) => p.status === "review").length,
-    draft:     plans.filter((p) => p.status === "draft").length,
-    archived:  plans.filter((p) => p.status === "archived").length,
+    review: plans.filter((p) => p.status === "review").length,
+    draft: plans.filter((p) => p.status === "draft").length,
+    archived: plans.filter((p) => p.status === "archived").length,
   };
 
+  const byAvailability = {
+    active: plans.filter((p) => p.plan_status === "active").length,
+    existing_only: plans.filter((p) => p.plan_status === "existing_only").length,
+    ended: plans.filter((p) => p.plan_status === "ended").length,
+    unknown: plans.filter((p) => (p.plan_status ?? "unknown") === "unknown").length,
+  } satisfies Record<PlanAvailability, number>;
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      {/* ヘッダー */}
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">プラン管理</h1>
-        <div className="flex gap-3">
-          <span className="text-xs text-slate-400 self-center">
-            全 {plans.length} 件
-          </span>
-        </div>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">プラン管理</h1>
+        <span className="text-sm tabular-nums text-zinc-500">全 {plans.length} 件</span>
       </div>
 
-      {/* 集計バー */}
-      <div className="grid grid-cols-4 gap-3">
-        {(["published", "review", "draft", "archived"] as const).map((s) => (
-          <div key={s} className="bg-slate-800 rounded-lg p-3 border border-slate-700 text-center">
-            <p className="text-2xl font-bold text-white">{byStatus[s]}</p>
-            <span className={`text-xs px-1.5 py-0.5 rounded font-medium mt-1 inline-block ${STATUS_BADGE[s]}`}>
-              {STATUS_LABEL[s]}
-            </span>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {(["published", "review", "draft", "archived"] as const).map((status) => (
+          <div key={status} className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+            <p className="text-xs font-medium text-zinc-500">{STATUS_LABEL[status]}</p>
+            <p
+              className={`mt-2 text-3xl font-semibold tabular-nums ${
+                byStatus[status] > 0 && status !== "archived" ? "text-zinc-950" : "text-zinc-400"
+              }`}
+            >
+              {byStatus[status]}
+            </p>
           </div>
         ))}
       </div>
 
-      {/* テーブル */}
-      <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-700 text-slate-400 text-xs">
-              <th className="px-4 py-3 text-left font-medium">プラン名</th>
-              <th className="px-4 py-3 text-left font-medium">キャリア</th>
-              <th className="px-4 py-3 text-left font-medium">種別</th>
-              <th className="px-4 py-3 text-right font-medium">基本料 (税込)</th>
-              <th className="px-4 py-3 text-left font-medium">ステータス</th>
-              <th className="px-4 py-3 text-left font-medium">データソース</th>
-              <th className="px-4 py-3 text-left font-medium">最終更新</th>
-            </tr>
-          </thead>
-          <tbody>
-            {plans.map((plan) => (
-              <tr key={plan.id} className="border-b border-slate-700/50 hover:bg-slate-700/30 group">
-                <td className="px-4 py-3 font-medium text-white">
-                  <div className="flex flex-col">
-                    <span>{plan.plan_name}</span>
-                    <span className="text-xs text-slate-500 mt-0.5 font-normal">{plan.id}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`text-xs px-2 py-0.5 rounded font-medium ${
-                    CARRIER_BADGE[plan.carrier_id] ?? "bg-slate-700 text-slate-300"
-                  }`}>
-                    {plan.carrier_id}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-slate-300">
-                  {PLAN_TYPE_LABEL[plan.plan_type] ?? plan.plan_type}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {plan.billing?.tiers?.[0] ? (
-                    <div className="flex flex-col items-end">
-                      <span className="text-white font-semibold">
-                        ¥{(plan.billing.tiers[0].monthly_fee_yen ?? 0).toLocaleString()}
-                      </span>
-                      <span className="text-slate-400 text-xs">
-                        {plan.billing.tiers[0].up_to_gb === "unlimited"
-                          ? "無制限"
-                          : `〜${plan.billing.tiers[0].up_to_gb}GB`}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-slate-500">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`text-xs px-2 py-0.5 rounded font-medium ${STATUS_BADGE[plan.status]}`}>
-                    {STATUS_LABEL[plan.status]}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  {plan.evidence?.source_url ? (
-                    <a
-                      href={plan.evidence.source_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-blue-400 hover:underline"
-                    >
-                      公式 ↗
-                    </a>
-                  ) : (
-                    <span className="text-slate-500 text-xs">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-slate-400 text-xs">
-                  {new Date(plan.updated_at).toLocaleDateString("ja-JP")}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {(["active", "existing_only", "ended", "unknown"] as const).map((availability) => (
+          <div key={availability} className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+            <p className="text-xs font-medium text-zinc-500">{AVAILABILITY_LABEL[availability]}</p>
+            <p
+              className={`mt-2 text-3xl font-semibold tabular-nums ${
+                byAvailability[availability] > 0 && availability === "active" ? "text-zinc-950" : "text-zinc-400"
+              }`}
+            >
+              {byAvailability[availability]}
+            </p>
+          </div>
+        ))}
       </div>
 
-      <div className="text-xs text-slate-500 text-center">
-        プランデータの変更は差分キューから行ってください。
-        <Link href="/admin/diffs" className="text-blue-400 hover:underline ml-1">
-          差分キューへ →
-        </Link>
+      <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-zinc-100 text-left text-xs text-zinc-500">
+                <th className="px-5 py-3 font-medium">プラン名</th>
+                <th className="px-5 py-3 font-medium">キャリア</th>
+                <th className="px-5 py-3 font-medium">種別</th>
+                <th className="px-5 py-3 text-right font-medium">基本料（税込）</th>
+                <th className="px-5 py-3 font-medium">ステータス</th>
+                <th className="px-5 py-3 font-medium">受付状態</th>
+                <th className="px-5 py-3 font-medium">ソース</th>
+                <th className="px-5 py-3 font-medium">確認日</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100">
+              {plans.map((plan) => (
+                <tr key={plan.id} className="transition-colors hover:bg-stone-50">
+                  <td className="px-5 py-3">
+                    <p className="font-medium text-zinc-950">{plan.plan_name}</p>
+                    <p className="mt-0.5 text-xs text-zinc-400">{plan.id}</p>
+                  </td>
+                  <td className="px-5 py-3 text-zinc-600">{plan.carrier_id}</td>
+                  <td className="px-5 py-3 text-zinc-600">
+                    {PLAN_TYPE_LABEL[plan.plan_type] ?? plan.plan_type}
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    {plan.billing?.tiers?.[0] ? (
+                      <>
+                        <p className="font-semibold tabular-nums text-zinc-950">
+                          ¥{(plan.billing.tiers[0].monthly_fee_yen ?? 0).toLocaleString()}
+                        </p>
+                        <p className="mt-0.5 text-xs text-zinc-400">
+                          {plan.billing.tiers[0].up_to_gb === "unlimited"
+                            ? "無制限"
+                            : `〜${plan.billing.tiers[0].up_to_gb}GB`}
+                        </p>
+                      </>
+                    ) : (
+                      <span className="text-zinc-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3">
+                    <span
+                      className={`rounded-md px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[plan.status]}`}
+                    >
+                      {STATUS_LABEL[plan.status] ?? plan.status}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3">
+                    <PlanAvailabilityControl key={`${plan.id}-${plan.plan_status ?? "unknown"}`} plan={plan} />
+                  </td>
+                  <td className="px-5 py-3">
+                    {plan.evidence?.source_url ? (
+                      <a
+                        href={plan.evidence.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-zinc-600 transition-colors hover:text-zinc-950"
+                      >
+                        公式
+                        <OpenNewWindow className="h-3 w-3" aria-hidden="true" />
+                      </a>
+                    ) : (
+                      <span className="text-xs text-zinc-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3 text-xs text-zinc-500">
+                    {new Date(plan.last_verified_at ?? plan.evidence.fetched_at).toLocaleDateString("ja-JP")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      <p className="text-center text-xs text-zinc-500">
+        プランデータの変更は
+        <Link href="/admin/diffs" className="mx-1 font-medium text-zinc-700 underline-offset-4 hover:underline">
+          差分キュー
+        </Link>
+        から行ってください。
+      </p>
     </div>
   );
 }

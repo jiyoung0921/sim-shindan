@@ -1,9 +1,10 @@
 name: 料金スクレイパー
 
 on:
-  # 毎日 JST 07:00 (UTC 22:00 前日) に実行
+  # JST 07:00 (UTC 22:00 前日) に実行。日曜は品質チェックも併走。
   schedule:
-    - cron: "0 22 * * *"
+    - cron: "0 22 * * 1-6"
+    - cron: "0 22 * * 0"
   # 手動実行・dry-run 対応
   workflow_dispatch:
     inputs:
@@ -94,7 +95,7 @@ jobs:
   quality-check:
     name: データ品質チェック（週次）
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' && startsWith(github.event.schedule, '0 22 * * 0')
+    if: github.event_name == 'schedule' && github.event.schedule == '0 22 * * 0'
     needs: scrape
 
     steps:

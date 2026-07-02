@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+AUTO_APPLY_EXTRACTED_VALUES = os.getenv("AUTO_APPLY_EXTRACTED_VALUES", "").lower() == "true"
 
 PLANS_JSON_PATH = os.path.join(
     os.path.dirname(__file__), "..", "public", "data", "plans.json"
@@ -59,6 +60,18 @@ def normalize_plan(
     # ディープコピーしてベースラインを保護
     import copy
     normalized = copy.deepcopy(plan)
+
+    # MVPでは抽出値を直接料金マスタへ反映しない。
+    # キャリア公式ページは割引後価格・注釈価格・通話オプション価格が混在するため、
+    # 「ページ内の最初の価格」を採用すると誤差分を作りやすい。
+    if not AUTO_APPLY_EXTRACTED_VALUES:
+        if extracted.get("base_fee_yen") or extracted.get("data_gb_limit"):
+            logger.info(
+                "Extracted values observed for %s but not applied "
+                "(set AUTO_APPLY_EXTRACTED_VALUES=true to enable)",
+                plan_id,
+            )
+        return normalized
 
     # billing.tiers[0].monthly_fee_yen を更新
     new_fee = extracted.get("base_fee_yen")

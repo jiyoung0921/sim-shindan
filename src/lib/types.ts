@@ -5,6 +5,7 @@
 export type PlanType = "MNO" | "sub_brand" | "online_only" | "MVNO";
 export type StoreSupport = "full" | "limited" | "none";
 export type PlanStatus = "draft" | "review" | "published" | "archived";
+export type PlanAvailability = "active" | "ended" | "existing_only" | "unknown";
 
 export interface PriceTier {
   up_to_gb: number | "unlimited";
@@ -16,6 +17,7 @@ export interface Discount {
   name: string;
   monthly_discount_yen: number;
   condition: string;
+  exclusive_group?: string; // 同一グループ内の割引は最も大きい1つだけ適用
   condition_structured: {
     min_lines?: number;
     requires_fixed_line?: boolean;
@@ -83,6 +85,8 @@ export interface PlanRecord {
   };
 
   status: PlanStatus;
+  plan_status?: PlanAvailability; // 新規申込の受付状態。status は公開ワークフロー用。
+  last_verified_at?: string;      // 公式情報を人間または監視で最後に確認した日時。
   created_at: string;
   updated_at: string;
 }
@@ -94,6 +98,7 @@ export interface PlanRecord {
 export type CallFrequency = "none" | "few_monthly" | "few_weekly" | "daily";
 export type MigrationTolerance = "self" | "support_needed" | "impossible";
 export type PointEcosystemType = "d_point" | "au_point" | "paypay" | "rakuten" | "none";
+export type FixedLineCarrier = "docomo" | "au" | "softbank" | "rakuten" | "other" | "none";
 
 export interface DiagnosisAnswers {
   current_carrier: string;           // "docomo" | "au" | "softbank" | "rakuten" | "other"
@@ -102,6 +107,7 @@ export interface DiagnosisAnswers {
   call_frequency: CallFrequency;
   family_lines_count: number;        // 0 = 家族なし
   family_all_switching: boolean;     // 家族全員で変える予定か
+  fixed_line_carrier: FixedLineCarrier; // 自宅の固定回線（光セット割の判定に使用）
   device_installment_remaining_months: number; // 0 = 完済
   store_support_priority: 1 | 2 | 3 | 4;      // 1=どうでもよい, 4=必須
   quality_sensitivity: 1 | 2 | 3 | 4;         // 1=気にしない, 4=とても重要
@@ -134,7 +140,7 @@ export interface PlanRecommendation {
   recommended_tier: PriceTier | null; // ユーザーのGB使用量に適した段階
   applicable_discounts: Discount[];  // ユーザーに適用可能な割引
   effective_monthly_fee: number;     // 割引適用後の現金支出
-  breakeven_months: number;          // 端末残債回収月数（0=即回収）
+  installment_remaining_months: number; // 端末残債の残り月数（0=完済または節約なし）
   fit_reasons: string[];             // 「この人に合う理由」3点
   caveats: string[];                 // 「注意点」2点
   axis_scores: {

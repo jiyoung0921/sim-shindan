@@ -4,27 +4,24 @@
       "id": "docomo",
       "plans": [
         {
-          "plan_id": "docomo_eximo",
-          "url": "https://www.docomo.ne.jp/charge/eximo/",
+          "plan_id": "docomo_max_2026",
+          "url": "https://www.docomo.ne.jp/charge/docomo_max/",
           "selectors": {
-            "plan_name": "h1.plan-name, .plan-title h1",
-            "base_fee": ".price-main, .charge-price strong",
-            "data_table": "table.charge-table, .plan-table"
+            "base_fee": ".price-main, .plan-price, .charge-price, .price-num, [class*=price] strong, [class*=charge] strong"
           }
         },
         {
-          "plan_id": "docomo_eximo_mini",
-          "url": "https://www.docomo.ne.jp/charge/eximo/",
+          "plan_id": "docomo_mini_2026",
+          "url": "https://www.docomo.ne.jp/charge/docomo_mini/",
           "selectors": {
-            "base_fee": ".price-step-table td.price"
+            "base_fee": ".price-main, .plan-price, .charge-price, .price-num, [class*=price] strong, [class*=charge] strong"
           }
         },
         {
-          "plan_id": "ahamo",
-          "url": "https://ahamo.com/services/top/",
+          "plan_id": "ahamo_2026",
+          "url": "https://ahamo.com/plan/index.html",
           "selectors": {
-            "plan_name": "h1",
-            "base_fee": ".price-num, .charge-amount"
+            "base_fee": ".price-main, .plan-price, .charge-price, .price-num, [class*=price] strong, [class*=charge] strong"
           }
         }
       ]
@@ -33,10 +30,17 @@
       "id": "au",
       "plans": [
         {
-          "plan_id": "povo2",
-          "url": "https://povo.jp/spec/",
+          "plan_id": "povo2_2026",
+          "url": "https://povo.jp/topping/",
           "selectors": {
-            "base_fee": ".price-number, .plan-price"
+            "base_fee": ".price-main, .plan-price, .charge-price, .price-num, [class*=price] strong, [class*=charge] strong"
+          }
+        },
+        {
+          "plan_id": "uqmobile_komikomi_value_2026",
+          "url": "https://www.uqwimax.jp/mobile/plan/komikomi-pv/",
+          "selectors": {
+            "base_fee": ".price-main, .plan-price, .charge-price, .price-num, [class*=price] strong, [class*=charge] strong"
           }
         }
       ]
@@ -45,29 +49,31 @@
       "id": "softbank",
       "plans": [
         {
-          "plan_id": "linemo_smart",
+          "plan_id": "linemo_best_2026",
           "url": "https://www.linemo.jp/plan/",
           "selectors": {
-            "base_fee": ".plan-price-number, .price-amount"
+            "base_fee": ".price-main, .plan-price, .charge-price, .price-num, [class*=price] strong, [class*=charge] strong"
           }
         },
         {
-          "plan_id": "ymobile_simple2m",
+          "plan_id": "linemo_best_v_2026",
+          "url": "https://www.linemo.jp/plan/",
+          "selectors": {
+            "base_fee": ".price-main, .plan-price, .charge-price, .price-num, [class*=price] strong, [class*=charge] strong"
+          }
+        },
+        {
+          "plan_id": "ymobile_simple3_m_2026",
           "url": "https://www.ymobile.jp/plan/",
           "selectors": {
-            "base_fee": ".plan-price, .price-num"
+            "base_fee": ".price-main, .plan-price, .charge-price, .price-num, [class*=price] strong, [class*=charge] strong"
           }
-        }
-      ]
-    },
-    {
-      "id": "uqmobile",
-      "plans": [
+        },
         {
-          "plan_id": "uq_comekomi_m",
-          "url": "https://www.uqwimax.jp/mobile/plans/komikomi/",
+          "plan_id": "ymobile_simple3_s_2026",
+          "url": "https://www.ymobile.jp/plan/",
           "selectors": {
-            "base_fee": ".price-num, .plan-price"
+            "base_fee": ".price-main, .plan-price, .charge-price, .price-num, [class*=price] strong, [class*=charge] strong"
           }
         }
       ]
@@ -76,10 +82,10 @@
       "id": "rakuten",
       "plans": [
         {
-          "plan_id": "rakuten_saikyo",
-          "url": "https://network.mobile.rakuten.co.jp/fee/un-limit/",
+          "plan_id": "rakuten_unlimited_2026",
+          "url": "https://network.mobile.rakuten.co.jp/fee/saikyo-plan/",
           "selectors": {
-            "base_fee": ".price-main strong, .charge-price"
+            "base_fee": ".price-main, .plan-price, .charge-price, .price-num, [class*=price] strong, [class*=charge] strong"
           }
         }
       ]
@@ -88,10 +94,10 @@
       "id": "iij",
       "plans": [
         {
-          "plan_id": "iijmio_giga10",
-          "url": "https://www.iijmio.jp/hnapocket/",
+          "plan_id": "iijmio_10gb_2026",
+          "url": "https://www.iijmio.jp/gigaplan/",
           "selectors": {
-            "base_fee": ".price-area td, .data-plan-price"
+            "base_fee": ".price-main, .plan-price, .charge-price, .price-num, [class*=price] strong, [class*=charge] strong"
           }
         }
       ]
@@ -100,10 +106,10 @@
       "id": "mineo",
       "plans": [
         {
-          "plan_id": "mineo_maypita10",
-          "url": "https://mineo.jp/plan/",
+          "plan_id": "mineo_10gb_2026",
+          "url": "https://mineo.jp/price/",
           "selectors": {
-            "base_fee": ".plan-price .price, .charge-price"
+            "base_fee": ".price-main, .plan-price, .charge-price, .price-num, [class*=price] strong, [class*=charge] strong"
           }
         }
       ]
@@ -112,17 +118,17 @@
       "id": "nuro",
       "plans": [
         {
-          "plan_id": "nuro_neo10",
-          "url": "https://mobile.nuro.jp/plan/",
+          "plan_id": "nuro_10gb_2026",
+          "url": "https://mobile.nuro.jp/plan/valueplus/",
           "selectors": {
-            "base_fee": ".plan-price, .price-main"
+            "base_fee": ".price-main, .plan-price, .charge-price, .price-num, [class*=price] strong, [class*=charge] strong"
           }
         }
       ]
     }
   ],
   "anomaly_threshold_pct": 30,
-  "request_delay_sec": 2.0,
+  "request_delay_sec": 2,
   "max_retries": 3,
-  "user_agent": "Mozilla/5.0 (compatible; SimShindanBot/1.0; +https://sim-shindan.example.com/bot)"
+  "user_agent": "Mozilla/5.0 (compatible; SimShindanBot/1.0; +https://sumahoshindan.com/bot)"
 }

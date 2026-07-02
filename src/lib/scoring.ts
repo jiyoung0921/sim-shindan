@@ -35,28 +35,96 @@ function selectTier(plan: PlanRecord, data_usage_gb: number | "unknown"): PriceT
   return sorted[sorted.length - 1]; // 最大段階
 }
 
-/** ユーザーに適用可能な割引を抽出 */
+/**
+ * 回答の current_carrier（ブランド単位: ymobile, povo 等を含む）を
+ * plans.json の carrier_id（回線グループ単位）へ正規化する。
+ */
+const CARRIER_GROUP: Record<string, string> = {
+  docomo: "docomo",
+  ahamo: "docomo",
+  au: "au",
+  povo: "au",
+  uqmobile: "au",
+  softbank: "softbank",
+  ymobile: "softbank",
+  rakuten: "rakuten",
+};
+
+function carrierGroupOf(currentCarrier: string): string | null {
+  return CARRIER_GROUP[currentCarrier] ?? null;
+}
+
+/**
+ * 家族割はブランド単位の条件が多い。
+ * 例: SoftBank利用者が自分だけY!mobileへ移る場合、Y!mobileの家族割は原則カウントしない。
+ */
+const CURRENT_BRAND: Record<string, string> = {
+  docomo: "docomo_main",
+  ahamo: "ahamo",
+  au: "au_main",
+  povo: "povo",
+  uqmobile: "uq_mobile",
+  softbank: "softbank_main",
+  ymobile: "ymobile",
+  rakuten: "rakuten_mobile",
+};
+
+function currentBrandOf(currentCarrier: string): string | null {
+  return CURRENT_BRAND[currentCarrier] ?? null;
+}
+
+function isSameCurrentBrand(plan: PlanRecord, answers: DiagnosisAnswers): boolean {
+  return currentBrandOf(answers.current_carrier) === plan.brand_id;
+}
+
+/**
+ * ユーザーに適用可能な割引を抽出する。
+ * 原則: 回答から適用条件を確認できない割引は「適用しない」。
+ * 節約額を盛る方向の誤りは、このサービスの信頼を直接壊すため。
+ */
 function getApplicableDiscounts(plan: PlanRecord, answers: DiagnosisAnswers): Discount[] {
-  return plan.discounts.filter((d) => {
+  const applicable = plan.discounts.filter((d) => {
     const c = d.condition_structured;
-    // 家族割
+
+    // カード・電気・年齢条件は回答で確認していないため適用しない
+    if (c.requires_card) return false;
+    if (c.requires_electricity) return false;
+    if (c.age_max !== undefined) return false;
+
+    // 家族割: 家族回線が割引対象キャリアに揃う場合のみ必要回線数をカウントする。
+    // 自分だけ別キャリアへ移る場合、移行先では1回線扱い。
     if (c.min_lines !== undefined) {
-      if (answers.family_lines_count + 1 < c.min_lines) return false;
+      const targetCarrierLines =
+        isSameCurrentBrand(plan, answers) || answers.family_all_switching
+          ? answers.family_lines_count + 1
+          : 1;
+      if (targetCarrierLines < c.min_lines) return false;
     }
-    // 固定回線割（現在のキャリアと同じ回線を持っている場合のみ）
+
+    // 光セット割: 該当キャリア系の固定回線を実際に持っている場合のみ
     if (c.requires_fixed_line) {
-      // MVPでは現キャリアと同じグループの固定回線を持っているかを判定
-      const fixedLineCarriers: Record<string, string[]> = {
-        docomo: ["docomo"],
-        au: ["au"],
-        softbank: ["softbank"],
-        rakuten: ["rakuten"],
-      };
-      const sameBrand = fixedLineCarriers[plan.carrier_id] ?? [];
-      if (!sameBrand.includes(answers.current_carrier)) return false;
+      if (answers.fixed_line_carrier !== plan.carrier_id) return false;
     }
+
     return true;
   });
+
+  const selected: Discount[] = [];
+  const exclusiveGroups = new Map<string, Discount>();
+
+  for (const discount of applicable) {
+    if (!discount.exclusive_group) {
+      selected.push(discount);
+      continue;
+    }
+
+    const current = exclusiveGroups.get(discount.exclusive_group);
+    if (!current || discount.monthly_discount_yen > current.monthly_discount_yen) {
+      exclusiveGroups.set(discount.exclusive_group, discount);
+    }
+  }
+
+  return [...selected, ...exclusiveGroups.values()];
 }
 
 /** 割引合計額を計算 */
@@ -147,7 +215,7 @@ function calcFrictionScore(plan: PlanRecord, answers: DiagnosisAnswers): number 
     answers.family_lines_count > 0 &&
     !answers.family_all_switching &&
     plan.plan_type !== "MNO" &&
-    answers.current_carrier !== plan.carrier_id
+    !isSameCurrentBrand(plan, answers)
   ) {
     friction += 0.25;
   }
@@ -212,6 +280,14 @@ const WEIGHTS = {
   psychology: 0.05,
 };
 
+function isRecommendablePlan(plan: PlanRecord): boolean {
+  return plan.status === "published" && plan.plan_status === "active";
+}
+
+function getVerifiedAt(plan: PlanRecord): string {
+  return plan.last_verified_at ?? plan.evidence.fetched_at;
+}
+
 function scorePlan(
   plan: PlanRecord,
   answers: DiagnosisAnswers
@@ -237,7 +313,7 @@ function scorePlan(
   const pointValue = plan.point_economy?.monthly_point_estimate ?? 0;
   const effectiveSaving = cashSaving + pointValue;
   const annualSaving = cashSaving * 12;
-  const breakevenMonths = cashSaving > 0 ? answers.device_installment_remaining_months : 0;
+  const installmentRemainingMonths = cashSaving > 0 ? answers.device_installment_remaining_months : 0;
 
   // 各軸スコア
   const savingsScore = calcSavingsScore(cashSaving);
@@ -283,8 +359,12 @@ function scorePlan(
   if (plan.constraints.online_only && answers.migration_tolerance !== "self") {
     caveats.push("契約・サポートはオンライン中心。店舗での相談は限定的");
   }
-  if (answers.family_lines_count > 0 && !answers.family_all_switching && answers.current_carrier !== plan.carrier_id) {
-    caveats.push(`現在の家族割（${answers.current_carrier}）が解除になる可能性があります`);
+  if (
+    answers.family_lines_count > 0 &&
+    !answers.family_all_switching &&
+    !isSameCurrentBrand(plan, answers)
+  ) {
+    caveats.push("自分だけ乗り換えると、現在の家族割が解除になる可能性があります");
   }
   if (answers.device_installment_remaining_months > 0) {
     caveats.push(`端末残債が残${answers.device_installment_remaining_months}ヶ月ある場合、乗り換え後も支払いが続きます`);
@@ -306,7 +386,7 @@ function scorePlan(
     recommended_tier: tier,
     applicable_discounts: applicableDiscounts,
     effective_monthly_fee: effectiveMonthlyFee,
-    breakeven_months: breakevenMonths,
+    installment_remaining_months: installmentRemainingMonths,
     fit_reasons: fitReasons.slice(0, 3),
     caveats: caveats.slice(0, 2),
     axis_scores: {
@@ -334,7 +414,7 @@ function determineVerdict(
   const familyFriction =
     answers.family_lines_count > 0 &&
     !answers.family_all_switching &&
-    answers.current_carrier !== best.plan.carrier_id;
+    !isSameCurrentBrand(best.plan, answers);
 
   let verdict: Verdict;
   let recommended_action: RecommendedAction;
@@ -358,11 +438,11 @@ function determineVerdict(
     return { verdict, recommended_action, reason };
   }
 
-  // 同一キャリア内プラン変更が有効な場合
-  if (best.plan.carrier_id === answers.current_carrier) {
+  // 同一キャリアグループ内の変更が有効な場合
+  if (carrierGroupOf(answers.current_carrier) === best.plan.carrier_id) {
     verdict = hasInstallment ? "switch_next_cycle" : "switch_now";
     recommended_action = 2;
-    reason = `同じキャリア内でプランを変更するだけで月${saving.toLocaleString()}円（年間${best.annual_saving.toLocaleString()}円）の節約になります。MNP不要でデータの引き継ぎも簡単です。${hasInstallment ? `端末の残債（残${answers.device_installment_remaining_months}ヶ月）はプラン変更後も継続しますが、節約メリットのほうが大きいです。` : ""}`;
+    reason = `同じキャリアグループ内の変更で月${saving.toLocaleString()}円（年間${best.annual_saving.toLocaleString()}円）の節約になります。番号そのままで手続きも簡単です。${hasInstallment ? `端末の残債（残${answers.device_installment_remaining_months}ヶ月）は変更後も継続しますが、節約メリットのほうが大きいです。` : ""}`;
     return { verdict, recommended_action, reason };
   }
 
@@ -461,8 +541,9 @@ export function runDiagnosis(
   plans: PlanRecord[],
   answers: DiagnosisAnswers
 ): DiagnosisResult {
-  // 公開済みプランのみ対象
-  const activePlans = plans.filter((p) => p.status === "published");
+  // 公開済み、かつ新規申込可能なプランのみ対象。
+  // status は編集ワークフロー用、plan_status は実際の受付状態用として分ける。
+  const activePlans = plans.filter(isRecommendablePlan);
 
   // 全プランをスコアリング
   const scored = activePlans
@@ -476,12 +557,25 @@ export function runDiagnosis(
   }));
 
   const best = top3[0];
+  if (!best) {
+    return {
+      verdict: "keep_current",
+      recommended_action: 1,
+      ...determinePersona(answers),
+      verdict_reason:
+        "新規申込可能として確認済みのプランが不足しています。公式情報を確認したうえで再診断してください。",
+      recommendations: [],
+      generated_at: new Date().toISOString(),
+      plan_data_freshness: new Date().toISOString(),
+    };
+  }
+
   const { verdict, recommended_action, reason } = determineVerdict(best, answers);
   const persona = determinePersona(answers);
 
-  // データの鮮度（最も古いfetched_atを使用）
+  // データの鮮度（推奨対象のうち最も古い最終確認日を使用）
   const freshness = activePlans
-    .map((p) => p.evidence.fetched_at)
+    .map(getVerifiedAt)
     .sort()[0];
 
   return {

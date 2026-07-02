@@ -1,20 +1,24 @@
 "use client";
 
 import {
-  AlertTriangle,
   BadgeCheck,
-  CheckCircle2,
+  CheckCircle,
   Database,
-  ExternalLink,
-  ReceiptText,
-  Store,
+  OpenNewWindow,
+  Page,
+  Shop,
+  WarningTriangle,
   Wifi,
-} from "lucide-react";
-import { PlanRecommendation } from "@/lib/types";
+} from "iconoir-react";
+import { PlanRecommendation, Verdict } from "@/lib/types";
+import CarrierIcon from "@/components/CarrierIcon";
+import { getCarrierBrand } from "@/lib/carriers";
 
 interface PlanCardProps {
   recommendation: PlanRecommendation;
   showDetail?: boolean;
+  sessionId?: string;
+  verdict?: Verdict;
 }
 
 const PLAN_TYPE_LABEL: Record<string, string> = {
@@ -30,16 +34,6 @@ const STORE_LABEL: Record<string, string> = {
   none: "オンラインのみ",
 };
 
-const CARRIER_LABEL: Record<string, string> = {
-  docomo: "docomo",
-  au: "au",
-  softbank: "SoftBank",
-  rakuten: "楽天モバイル",
-  iij: "IIJmio",
-  mineo: "mineo",
-  nuro: "NURO",
-};
-
 function yen(value: number) {
   return `¥${value.toLocaleString()}`;
 }
@@ -52,7 +46,14 @@ function formatDate(iso: string) {
   });
 }
 
-export default function PlanCard({ recommendation, showDetail = false }: PlanCardProps) {
+function officialLinkHref(planId: string, rank: number, sessionId?: string, verdict?: Verdict): string {
+  const params = new URLSearchParams({ rank: String(rank) });
+  if (sessionId) params.set("sid", sessionId);
+  if (verdict) params.set("verdict", verdict);
+  return `/api/go/${encodeURIComponent(planId)}?${params.toString()}`;
+}
+
+export default function PlanCard({ recommendation, showDetail = false, sessionId, verdict }: PlanCardProps) {
   const {
     plan,
     rank,
@@ -62,7 +63,6 @@ export default function PlanCard({ recommendation, showDetail = false }: PlanCar
     effective_monthly_fee,
     recommended_tier,
     applicable_discounts,
-    breakeven_months,
     fit_reasons,
     caveats,
   } = recommendation;
@@ -70,6 +70,15 @@ export default function PlanCard({ recommendation, showDetail = false }: PlanCar
   const hasSaving = cash_saving_per_month > 0;
   const pointGain = effective_saving_per_month - cash_saving_per_month;
   const totalDiscount = applicable_discounts.reduce((sum, discount) => sum + discount.monthly_discount_yen, 0);
+  const installmentInfo = recommendation as unknown as {
+    installment_remaining_months?: number;
+    breakeven_months?: number;
+  };
+  const remainingInstallmentMonths =
+    installmentInfo.installment_remaining_months ?? installmentInfo.breakeven_months ?? 0;
+  const carrier = getCarrierBrand(plan.carrier_id);
+  const verifiedAt = plan.last_verified_at ?? plan.evidence.fetched_at;
+  const officialHref = officialLinkHref(plan.id, rank, sessionId, verdict);
 
   return (
     <article className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
@@ -89,12 +98,17 @@ export default function PlanCard({ recommendation, showDetail = false }: PlanCar
                 </span>
               )}
             </div>
-            <h3 className="mt-3 text-xl font-semibold leading-tight text-zinc-950">{plan.plan_name}</h3>
-            <p className="mt-1 text-sm text-zinc-500">{CARRIER_LABEL[plan.carrier_id] ?? plan.carrier_id}</p>
+            <div className="mt-3 flex items-center gap-3">
+              <CarrierIcon carrier={carrier} />
+              <div>
+                <h3 className="text-xl font-semibold leading-tight text-zinc-950">{plan.plan_name}</h3>
+                <p className="mt-1 text-sm text-zinc-500">{carrier.label}</p>
+              </div>
+            </div>
           </div>
           <div className="shrink-0 text-right">
             <p className="text-xs text-zinc-500">月額</p>
-            <p className="mt-1 text-2xl font-semibold text-zinc-950">{yen(effective_monthly_fee)}</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-950">{yen(effective_monthly_fee)}</p>
             <p className="text-xs text-zinc-500">現金支出ベース</p>
           </div>
         </div>
@@ -103,10 +117,10 @@ export default function PlanCard({ recommendation, showDetail = false }: PlanCar
       <div className="grid divide-y divide-zinc-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         <div className="px-5 py-4">
           <p className="text-xs text-zinc-500">現在との差額</p>
-          <p className={`mt-1 text-lg font-semibold ${hasSaving ? "text-emerald-700" : "text-zinc-700"}`}>
+          <p className={`mt-1 text-lg font-semibold tabular-nums ${hasSaving ? "text-emerald-700" : "text-zinc-700"}`}>
             {hasSaving ? `月 -${yen(cash_saving_per_month)}` : "節約なし"}
           </p>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs tabular-nums text-zinc-500">
             {hasSaving ? `年間 -${yen(annual_saving)}` : "条件次第で割高になる可能性"}
           </p>
         </div>
@@ -130,26 +144,26 @@ export default function PlanCard({ recommendation, showDetail = false }: PlanCar
         </div>
       </div>
 
-      {(totalDiscount > 0 || pointGain > 0 || breakeven_months > 0) && (
+      {(totalDiscount > 0 || pointGain > 0 || remainingInstallmentMonths > 0) && (
         <div className="border-t border-zinc-100 px-5 py-4">
           <div className="space-y-2 text-sm leading-6">
             {totalDiscount > 0 && (
               <p className="flex gap-2 text-zinc-700">
-                <ReceiptText className="mt-1 h-4 w-4 shrink-0 text-zinc-500" aria-hidden="true" />
+                <Page className="mt-1 h-4 w-4 shrink-0 text-zinc-500" strokeWidth={1.8} aria-hidden="true" />
                 割引適用後の月額です。割引合計は月 {yen(totalDiscount)}。
               </p>
             )}
             {pointGain > 0 && (
               <p className="flex gap-2 text-amber-800">
-                <BadgeCheck className="mt-1 h-4 w-4 shrink-0" aria-hidden="true" />
+                <BadgeCheck className="mt-1 h-4 w-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
                 ポイント込み実質は月 -{yen(effective_saving_per_month)}。条件:{" "}
                 {plan.point_economy?.condition ?? "ポイント付与条件を要確認"}
               </p>
             )}
-            {breakeven_months > 0 && (
+            {remainingInstallmentMonths > 0 && (
               <p className="flex gap-2 text-zinc-700">
-                <AlertTriangle className="mt-1 h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" />
-                端末残債が残り{breakeven_months}ヶ月あります。完済後の再診断も推奨です。
+                <WarningTriangle className="mt-1 h-4 w-4 shrink-0 text-amber-700" strokeWidth={1.8} aria-hidden="true" />
+                端末残債が残り{remainingInstallmentMonths}ヶ月あります。完済後の再診断も推奨です。
               </p>
             )}
           </div>
@@ -161,7 +175,7 @@ export default function PlanCard({ recommendation, showDetail = false }: PlanCar
           <div className="grid divide-y divide-zinc-100 md:grid-cols-2 md:divide-x md:divide-y-0">
             <section className="px-5 py-4">
               <h4 className="flex items-center gap-2 text-sm font-semibold text-zinc-950">
-                <CheckCircle2 className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+                <CheckCircle className="h-4 w-4 text-emerald-700" strokeWidth={1.8} aria-hidden="true" />
                 合う理由
               </h4>
               <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-700">
@@ -176,7 +190,7 @@ export default function PlanCard({ recommendation, showDetail = false }: PlanCar
 
             <section className="px-5 py-4">
               <h4 className="flex items-center gap-2 text-sm font-semibold text-zinc-950">
-                <AlertTriangle className="h-4 w-4 text-amber-700" aria-hidden="true" />
+                <WarningTriangle className="h-4 w-4 text-amber-700" strokeWidth={1.8} aria-hidden="true" />
                 注意点
               </h4>
               <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-700">
@@ -199,17 +213,17 @@ export default function PlanCard({ recommendation, showDetail = false }: PlanCar
 
           <div className="grid divide-y divide-zinc-100 border-t border-zinc-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
             <div className="flex items-center gap-2 px-5 py-3 text-sm text-zinc-600">
-              <Database className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <Database className="h-4 w-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
               {plan.data.monthly_gb === "unlimited" ? "無制限" : `${plan.data.monthly_gb}GB`}
             </div>
             <div className="flex items-center gap-2 px-5 py-3 text-sm text-zinc-600">
-              <Wifi className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <Wifi className="h-4 w-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
               {plan.data.throttle_speed_kbps >= 1000
                 ? `${plan.data.throttle_speed_kbps / 1000}Mbps`
                 : `${plan.data.throttle_speed_kbps}kbps`}
             </div>
             <div className="flex items-center gap-2 px-5 py-3 text-sm text-zinc-600">
-              <Store className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <Shop className="h-4 w-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
               {STORE_LABEL[plan.constraints.store_support]}
             </div>
           </div>
@@ -217,15 +231,15 @@ export default function PlanCard({ recommendation, showDetail = false }: PlanCar
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 bg-stone-50 px-5 py-3">
-        <p className="text-xs text-zinc-500">データ更新日: {formatDate(plan.evidence.fetched_at)}</p>
+        <p className="text-xs text-zinc-500">公式確認日: {formatDate(verifiedAt)}</p>
         <a
-          href={plan.evidence.source_url}
+          href={officialHref}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-xs font-medium text-zinc-700 underline-offset-4 hover:underline"
         >
           公式ページ
-          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+          <OpenNewWindow className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />
         </a>
       </div>
     </article>
