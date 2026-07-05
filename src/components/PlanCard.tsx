@@ -38,6 +38,10 @@ function yen(value: number) {
   return `¥${value.toLocaleString()}`;
 }
 
+function savingLabel(value: number) {
+  return value >= 0 ? `-${yen(value)}` : `+${yen(Math.abs(value))}`;
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("ja-JP", {
     year: "numeric",
@@ -70,6 +74,7 @@ export default function PlanCard({ recommendation, showDetail = false, sessionId
   const hasSaving = cash_saving_per_month > 0;
   const pointGain = effective_saving_per_month - cash_saving_per_month;
   const totalDiscount = applicable_discounts.reduce((sum, discount) => sum + discount.monthly_discount_yen, 0);
+  const initialFee = plan.billing.initial_fee_yen;
   const installmentInfo = recommendation as unknown as {
     installment_remaining_months?: number;
     breakeven_months?: number;
@@ -121,7 +126,7 @@ export default function PlanCard({ recommendation, showDetail = false, sessionId
             {hasSaving ? `月 -${yen(cash_saving_per_month)}` : "節約なし"}
           </p>
           <p className="mt-1 text-xs tabular-nums text-zinc-500">
-            {hasSaving ? `年間 -${yen(annual_saving)}` : "条件次第で割高になる可能性"}
+            {hasSaving ? `初年度 ${savingLabel(annual_saving)}` : "条件次第で割高になる可能性"}
           </p>
         </div>
         <div className="px-5 py-4">
@@ -144,7 +149,7 @@ export default function PlanCard({ recommendation, showDetail = false, sessionId
         </div>
       </div>
 
-      {(totalDiscount > 0 || pointGain > 0 || remainingInstallmentMonths > 0) && (
+      {(totalDiscount > 0 || pointGain > 0 || initialFee > 0 || remainingInstallmentMonths > 0) && (
         <div className="border-t border-zinc-100 px-5 py-4">
           <div className="space-y-2 text-sm leading-6">
             {totalDiscount > 0 && (
@@ -156,8 +161,14 @@ export default function PlanCard({ recommendation, showDetail = false, sessionId
             {pointGain > 0 && (
               <p className="flex gap-2 text-amber-800">
                 <BadgeCheck className="mt-1 h-4 w-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
-                ポイント込み実質は月 -{yen(effective_saving_per_month)}。条件:{" "}
+                ポイント目安は月 +{yen(pointGain)}。条件:{" "}
                 {plan.point_economy?.condition ?? "ポイント付与条件を要確認"}
+              </p>
+            )}
+            {initialFee > 0 && (
+              <p className="flex gap-2 text-zinc-700">
+                <Page className="mt-1 h-4 w-4 shrink-0 text-zinc-500" strokeWidth={1.8} aria-hidden="true" />
+                初期費用の目安は {yen(initialFee)}。初年度の差額はこの費用を差し引いています。
               </p>
             )}
             {remainingInstallmentMonths > 0 && (

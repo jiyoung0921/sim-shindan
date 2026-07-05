@@ -287,6 +287,11 @@
           "label": "5GB/30日"
         },
         {
+          "up_to_gb": 10,
+          "monthly_fee_yen": 1800,
+          "label": "10GB/月相当"
+        },
+        {
           "up_to_gb": 30,
           "monthly_fee_yen": 2780,
           "label": "30GB/30日"
@@ -323,7 +328,7 @@
       "installment_available": false
     },
     "evidence": {
-      "source_url": "https://povo.jp/topping/",
+      "source_url": "https://povo.jp/topping-list",
       "fetched_at": "2026-06-15T00:00:00+09:00",
       "published_at": "2021-09-01",
       "snapshot_path": "",
@@ -331,9 +336,9 @@
     },
     "status": "published",
     "created_at": "2026-06-07T00:00:00+09:00",
-    "updated_at": "2026-06-15T00:00:00+09:00",
+    "updated_at": "2026-07-05T00:00:00+09:00",
     "plan_status": "active",
-    "last_verified_at": "2026-07-02T00:00:00+09:00"
+    "last_verified_at": "2026-07-05T00:00:00+09:00"
   },
   {
     "id": "linemo_best_2026",
@@ -615,7 +620,7 @@
           "label": "無制限"
         }
       ],
-      "call_option_unlimited_yen": null,
+      "call_option_unlimited_yen": 0,
       "call_option_limited_yen": null,
       "initial_fee_yen": 0,
       "cancellation_fee_yen": 0
@@ -844,15 +849,20 @@
     "id": "nuro_10gb_2026",
     "carrier_id": "nuro",
     "brand_id": "nuro_mobile",
-    "plan_name": "NUROモバイル バリュープラス VLプラン",
+    "plan_name": "NUROモバイル バリュープラス",
     "plan_type": "MVNO",
     "billing": {
-      "base_fee_yen": 1485,
+      "base_fee_yen": 792,
       "tiers": [
         {
           "up_to_gb": 3,
           "monthly_fee_yen": 792,
           "label": "3GB"
+        },
+        {
+          "up_to_gb": 5,
+          "monthly_fee_yen": 990,
+          "label": "5GB"
         },
         {
           "up_to_gb": 10,
@@ -873,7 +883,7 @@
     "discounts": [],
     "point_economy": null,
     "data": {
-      "monthly_gb": 10,
+      "monthly_gb": 15,
       "throttle_speed_kbps": 200,
       "tethering_gb": "same"
     },
@@ -899,9 +909,9 @@
     },
     "status": "published",
     "created_at": "2026-06-07T00:00:00+09:00",
-    "updated_at": "2026-07-02T00:00:00+09:00",
+    "updated_at": "2026-07-05T00:00:00+09:00",
     "plan_status": "active",
-    "last_verified_at": "2026-07-02T00:00:00+09:00"
+    "last_verified_at": "2026-07-05T00:00:00+09:00"
   },
   {
     "id": "ymobile_simple3_s_2026",

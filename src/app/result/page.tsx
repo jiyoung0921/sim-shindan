@@ -66,6 +66,10 @@ function yen(value: number) {
   return `¥${value.toLocaleString()}`;
 }
 
+function savingLabel(value: number) {
+  return value >= 0 ? `-${yen(value)}` : `+${yen(Math.abs(value))}`;
+}
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("ja-JP", {
     year: "numeric",
@@ -226,7 +230,7 @@ export default function ResultPage() {
                     {hasSaving ? `月 -${yen(best.cash_saving_per_month)}` : "節約なし"}
                   </p>
                   <p className="mt-1 text-xs tabular-nums text-zinc-500">
-                    {hasSaving ? `年間 -${yen(best.annual_saving)}` : "条件によって割高になる可能性"}
+                    {hasSaving ? `初年度 ${savingLabel(best.annual_saving)}` : "条件によって割高になる可能性"}
                   </p>
                 </div>
               )}

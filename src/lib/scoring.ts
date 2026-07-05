@@ -18,7 +18,7 @@ import {
 function selectTier(plan: PlanRecord, data_usage_gb: number | "unknown"): PriceTier | null {
   if (plan.billing.tiers.length === 0) return null;
 
-  const usage = data_usage_gb === "unknown" ? 10 : data_usage_gb;
+  const usage = getAssumedUsageGb(data_usage_gb);
 
   // 使用量をカバーする最小の段階を選ぶ
   const sorted = [...plan.billing.tiers].sort((a, b) => {
@@ -32,7 +32,22 @@ function selectTier(plan: PlanRecord, data_usage_gb: number | "unknown"): PriceT
     if (usage <= max) return tier;
   }
 
-  return sorted[sorted.length - 1]; // 最大段階
+  return null;
+}
+
+function getAssumedUsageGb(data_usage_gb: number | "unknown"): number {
+  return data_usage_gb === "unknown" ? 10 : data_usage_gb;
+}
+
+function getMaxTierCapacityGb(plan: PlanRecord): number {
+  return plan.billing.tiers.reduce((max, tier) => {
+    const capacity = tier.up_to_gb === "unlimited" ? Infinity : tier.up_to_gb;
+    return Math.max(max, capacity);
+  }, 0);
+}
+
+function coversDataUsage(plan: PlanRecord, data_usage_gb: number | "unknown"): boolean {
+  return getAssumedUsageGb(data_usage_gb) <= getMaxTierCapacityGb(plan);
 }
 
 /**
@@ -247,6 +262,12 @@ function calcEcosystemScore(plan: PlanRecord, answers: DiagnosisAnswers): number
   return 0.2;
 }
 
+function shouldApplyPointEstimate(plan: PlanRecord, answers: DiagnosisAnswers): boolean {
+  if (!plan.point_economy) return false;
+  if (answers.point_ecosystems.includes("none")) return false;
+  return (answers.point_ecosystems as readonly string[]).includes(plan.point_economy.point_type);
+}
+
 function calcPsychologyScore(plan: PlanRecord, answers: DiagnosisAnswers): number {
   let score = 0.5; // 基本スコア
 
@@ -301,18 +322,17 @@ function scorePlan(
   let callFee = 0;
   if (answers.call_frequency === "daily" && plan.billing.call_option_unlimited_yen) {
     callFee = plan.billing.call_option_unlimited_yen;
-  } else if (
-    (answers.call_frequency === "few_monthly" || answers.call_frequency === "few_weekly") &&
-    plan.billing.call_option_limited_yen
-  ) {
+  } else if (answers.call_frequency === "few_weekly" && plan.billing.call_option_limited_yen) {
     callFee = plan.billing.call_option_limited_yen;
   }
 
   const effectiveMonthlyFee = Math.max(0, baseMonthlyFee + callFee - totalDiscount);
   const cashSaving = answers.current_monthly_fee_yen - effectiveMonthlyFee;
-  const pointValue = plan.point_economy?.monthly_point_estimate ?? 0;
+  const pointValue = shouldApplyPointEstimate(plan, answers)
+    ? plan.point_economy?.monthly_point_estimate ?? 0
+    : 0;
   const effectiveSaving = cashSaving + pointValue;
-  const annualSaving = cashSaving * 12;
+  const annualSaving = cashSaving * 12 - plan.billing.initial_fee_yen;
   const installmentRemainingMonths = cashSaving > 0 ? answers.device_installment_remaining_months : 0;
 
   // 各軸スコア
@@ -336,7 +356,7 @@ function scorePlan(
   const caveats: string[] = [];
 
   if (cashSaving >= 1000) {
-    fitReasons.push(`月${cashSaving.toLocaleString()}円（年間${(annualSaving).toLocaleString()}円）の現金節約余地`);
+    fitReasons.push(`月${cashSaving.toLocaleString()}円（初年度${annualSaving.toLocaleString()}円）の現金節約余地`);
   }
   const usageGb = answers.data_usage_gb === "unknown" ? 10 : answers.data_usage_gb;
   const planGb = plan.data.monthly_gb === "unlimited" ? "無制限" : `${plan.data.monthly_gb}GB`;
@@ -356,8 +376,23 @@ function scorePlan(
     fitReasons.push("回線品質が最上位・屋内や地方でも安定");
   }
 
+  if (plan.id === "povo2_2026" && tier?.label.includes("月相当")) {
+    caveats.push("この料金は120GB/365日トッピングの月割り目安です。購入時は年額21,600円が必要です");
+  }
+  if (
+    plan.brand_id === "ymobile" &&
+    applicableDiscounts.some((discount) => discount.name.includes("家族割引"))
+  ) {
+    caveats.push("Y!mobileの家族割は2回線目以降が対象。主回線にする場合は公式条件を確認してください");
+  }
+  if (plan.brand_id === "rakuten_mobile" && answers.call_frequency === "daily") {
+    caveats.push("無料通話はRakuten Link利用時の前提です。標準電話アプリの発信は通話料がかかります");
+  }
   if (plan.constraints.online_only && answers.migration_tolerance !== "self") {
     caveats.push("契約・サポートはオンライン中心。店舗での相談は限定的");
+  }
+  if (answers.call_frequency === "few_monthly") {
+    caveats.push("月数回の通話は定額オプションなしで試算。長電話が多い場合は通話料を確認してください");
   }
   if (
     answers.family_lines_count > 0 &&
@@ -442,7 +477,7 @@ function determineVerdict(
   if (carrierGroupOf(answers.current_carrier) === best.plan.carrier_id) {
     verdict = hasInstallment ? "switch_next_cycle" : "switch_now";
     recommended_action = 2;
-    reason = `同じキャリアグループ内の変更で月${saving.toLocaleString()}円（年間${best.annual_saving.toLocaleString()}円）の節約になります。番号そのままで手続きも簡単です。${hasInstallment ? `端末の残債（残${answers.device_installment_remaining_months}ヶ月）は変更後も継続しますが、節約メリットのほうが大きいです。` : ""}`;
+    reason = `同じキャリアグループ内の変更で月${saving.toLocaleString()}円（初年度${best.annual_saving.toLocaleString()}円）の節約になります。番号そのままで手続きも簡単です。${hasInstallment ? `端末の残債（残${answers.device_installment_remaining_months}ヶ月）は変更後も継続しますが、節約メリットのほうが大きいです。` : ""}`;
     return { verdict, recommended_action, reason };
   }
 
@@ -451,11 +486,11 @@ function determineVerdict(
     if (hasInstallment && saving < 1500) {
       verdict = "switch_next_cycle";
       recommended_action = 3;
-      reason = `月${saving.toLocaleString()}円の節約余地があります。端末の支払いが終わる${answers.device_installment_remaining_months}ヶ月後に乗り換えると、そこから年間${best.annual_saving.toLocaleString()}円の削減になります。`;
+      reason = `月${saving.toLocaleString()}円の節約余地があります。端末の支払いが終わる${answers.device_installment_remaining_months}ヶ月後に乗り換えると、初年度${best.annual_saving.toLocaleString()}円の削減になります。`;
     } else if (saving >= 1500) {
       verdict = "switch_now";
       recommended_action = 3;
-      reason = `月${saving.toLocaleString()}円（年間${best.annual_saving.toLocaleString()}円）の節約余地があります。${best.plan.constraints.store_support !== "none" ? "店舗サポートも使えるため、" : "手続きはオンライン完結ですが、"}乗り換えの障壁は低いと判断できます。`;
+      reason = `月${saving.toLocaleString()}円（初年度${best.annual_saving.toLocaleString()}円）の節約余地があります。${best.plan.constraints.store_support !== "none" ? "店舗サポートも使えるため、" : "手続きはオンライン完結ですが、"}乗り換えの障壁は低いと判断できます。`;
     } else {
       verdict = "switch_next_cycle";
       recommended_action = 3;
@@ -473,7 +508,7 @@ function determineVerdict(
     } else if (saving >= 2000) {
       verdict = hasInstallment ? "switch_next_cycle" : "switch_now";
       recommended_action = 4;
-      reason = `月${saving.toLocaleString()}円（年間${best.annual_saving.toLocaleString()}円）の大幅な節約余地があります。${hasInstallment ? `端末残債が完済する${answers.device_installment_remaining_months}ヶ月後に乗り換えることで、` : ""}コスト最適化のインパクトが最も大きいプランです。`;
+      reason = `月${saving.toLocaleString()}円（初年度${best.annual_saving.toLocaleString()}円）の大幅な節約余地があります。${hasInstallment ? `端末残債が完済する${answers.device_installment_remaining_months}ヶ月後に乗り換えることで、` : ""}コスト最適化のインパクトが最も大きいプランです。`;
     } else {
       verdict = "switch_next_cycle";
       recommended_action = 4;
@@ -485,7 +520,7 @@ function determineVerdict(
   // デフォルト
   verdict = saving >= 1500 ? "switch_now" : "switch_next_cycle";
   recommended_action = 3;
-  reason = `月${saving.toLocaleString()}円（年間${best.annual_saving.toLocaleString()}円）の節約余地があります。`;
+  reason = `月${saving.toLocaleString()}円（初年度${best.annual_saving.toLocaleString()}円）の節約余地があります。`;
   return { verdict, recommended_action, reason };
 }
 
@@ -544,9 +579,10 @@ export function runDiagnosis(
   // 公開済み、かつ新規申込可能なプランのみ対象。
   // status は編集ワークフロー用、plan_status は実際の受付状態用として分ける。
   const activePlans = plans.filter(isRecommendablePlan);
+  const eligiblePlans = activePlans.filter((plan) => coversDataUsage(plan, answers.data_usage_gb));
 
   // 全プランをスコアリング
-  const scored = activePlans
+  const scored = eligiblePlans
     .map((plan) => scorePlan(plan, answers))
     .sort((a, b) => b.total_score - a.total_score);
 
@@ -574,7 +610,7 @@ export function runDiagnosis(
   const persona = determinePersona(answers);
 
   // データの鮮度（推奨対象のうち最も古い最終確認日を使用）
-  const freshness = activePlans
+  const freshness = (eligiblePlans.length > 0 ? eligiblePlans : activePlans)
     .map(getVerifiedAt)
     .sort()[0];
 

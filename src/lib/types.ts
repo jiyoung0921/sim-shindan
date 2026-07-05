@@ -135,7 +135,7 @@ export interface PlanRecommendation {
   rank: 1 | 2 | 3;
   total_score: number;
   cash_saving_per_month: number;   // 現金支出ベースの月間節約額
-  annual_saving: number;
+  annual_saving: number;            // 初年度の現金節約額（初期費用を差し引いた額）
   effective_saving_per_month: number; // ポイント込み実質節約額
   recommended_tier: PriceTier | null; // ユーザーのGB使用量に適した段階
   applicable_discounts: Discount[];  // ユーザーに適用可能な割引

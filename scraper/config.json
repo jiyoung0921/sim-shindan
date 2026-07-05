@@ -31,7 +31,7 @@
       "plans": [
         {
           "plan_id": "povo2_2026",
-          "url": "https://povo.jp/topping/",
+          "url": "https://povo.jp/topping-list",
           "selectors": {
             "base_fee": ".price-main, .plan-price, .charge-price, .price-num, [class*=price] strong, [class*=charge] strong"
           }

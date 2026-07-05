@@ -14,6 +14,12 @@ const VERDICT_TEXT: Record<string, string> = {
   keep_current: "今は変えない方がよい",
 };
 
+function formatFirstYearSaving(value: number) {
+  return value >= 0
+    ? `初年度${value.toLocaleString()}円`
+    : `初年度は${Math.abs(value).toLocaleString()}円負担増`;
+}
+
 export default function ShareButton({ result }: ShareButtonProps) {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -32,7 +38,7 @@ export default function ShareButton({ result }: ShareButtonProps) {
     "スマホ料金診断",
     `タイプ: ${result.persona_label}`,
     `判定: ${VERDICT_TEXT[result.verdict]}`,
-    saving > 0 ? `節約余地: 月${saving.toLocaleString()}円 / 年間${annualSaving.toLocaleString()}円` : "",
+    saving > 0 ? `節約余地: 月${saving.toLocaleString()}円 / ${formatFirstYearSaving(annualSaving)}` : "",
     typeof window !== "undefined" ? window.location.origin : "",
   ]
     .filter(Boolean)
